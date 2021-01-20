@@ -90,8 +90,17 @@ int mainHelper(int argc, char *argv[], TLCM &roslcm)
             SendLowROS.motorCmd[RL_0].tau = +0.65f;
 
             // printf("%d\n", motiontime);
-            // printf("%d %f %f %f\n", FR_0, RecvLowROS.motorState[FR_0].q, RecvLowROS.motorState[FR_1].q, RecvLowROS.motorState[FR_2].q);
-            // printf("%f %f \n",  RecvLowROS.motorState[FR_0].mode, RecvLowROS.motorState[FR_1].mode);
+            printf("%d %f %f %f\n", FR_0, RecvLowROS.motorState[FR_0].q, RecvLowROS.motorState[FR_1].q, RecvLowROS.motorState[FR_2].q);
+            printf("%f %f \n",  RecvLowROS.motorState[FR_0].mode, RecvLowROS.motorState[FR_1].mode);
+            printf("foot force %d %d %d %d \n", RecvLowROS.footForce[0],
+                                                RecvLowROS.footForce[1],
+                                                RecvLowROS.footForce[2],
+                                                RecvLowROS.footForce[3]);
+            printf("foot force est %d %d %d %d \n", RecvLowROS.footForceEst[0],
+                                                RecvLowROS.footForceEst[1],
+                                                RecvLowROS.footForceEst[2],
+                                                RecvLowROS.footForceEst[3]);
+            
             if( motiontime >= 0){
                 // first, get record initial position
                 // if( motiontime >= 100 && motiontime < 500){
