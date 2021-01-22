@@ -47,6 +47,7 @@ int mainHelper(int argc, char *argv[], TLCM &roslcm)
 
     ros::NodeHandle n;
     ros::Rate loop_rate(500);
+    ros::Publisher pub = n.advertise<unitree_legged_msgs::LowState>("unitree/fbk_msgs", 5);
 
     long motiontime = 0;
     int rate_count = 0;
@@ -89,6 +90,9 @@ int mainHelper(int argc, char *argv[], TLCM &roslcm)
     while (ros::ok()){
         roslcm.Get(RecvLowLCM);
         RecvLowROS = ToRos(RecvLowLCM);
+
+        // publish the received data structure 
+        pub.publish(RecvLowROS);
 
         // always refresh the fbk_data
         for (int i = 0; i < 12; i++) {
