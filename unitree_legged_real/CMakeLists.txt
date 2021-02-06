@@ -78,7 +78,7 @@ message(STATUS "Found JlCxx at ${JlCxx_location}")
 
 add_library(julia_a1_interface SHARED src/julia/julia_interface.cpp)
 
-target_link_libraries(julia_a1_interface JlCxx::cxxwrap_julia)
+target_link_libraries(julia_a1_interface JlCxx::cxxwrap_julia ${EXTRA_LIBS})
 # this lib file locates in 
 # /home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib
 install(TARGETS
