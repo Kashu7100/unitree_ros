@@ -26,15 +26,33 @@ public:
         thread_.join(); 
     }
     void ReceiveObservation();
-    // void SendCommand(std::array<double,60> motorcmd);
+
+    void InitSend();
+
+    void SendCommand(std::array<double,60> motorcmd);
+
 
     // function for Julia
     int16_t getFootForce(int idx){
         return state.footForce[idx];
     }
 
-    MotorState getMotorState(int idx) {
-        return state.motorState[idx];
+    // need a number of functions to read motor state
+    float getMotorStateQ(int idx) {
+        return state.motorState[idx].q;
+    }
+    float getMotorStateDQ(int idx) {
+        return state.motorState[idx].dq;
+    }
+    float getMotorStateDDQ(int idx) {
+        return state.motorState[idx].ddq;
+    }
+    float getMotorStateTau(int idx) {
+        return state.motorState[idx].tauEst;
+    }
+
+    IMU getIMU() {
+        return state.imu;
     }
 
     UDP udp;
@@ -52,31 +70,47 @@ void RobotInterface::ReceiveObservation() {
         // std::cout << "receive" << std::endl;
         udp.GetRecv(state);
         // std::cout << state.footForce[0] << std::endl;
+        // std::cout << state.motorState[0].q << std::endl;
         // std::cout << state.imu.accelerometer[0] << std::endl;
     };
 }
 
-// void RobotInterface::SendCommand(std::array<double,60> motorcmd) {
-//     cmd.levelFlag = 0xff;
-//     for (int motor_id = 0; motor_id < 12; motor_id++) {
-//         cmd.motorCmd[motor_id].mode = 0x0A;
-//         cmd.motorCmd[motor_id].q = motorcmd[motor_id * 5];
-//         cmd.motorCmd[motor_id].Kp = motorcmd[motor_id * 5 + 1];
-//         cmd.motorCmd[motor_id].dq = motorcmd[motor_id * 5 + 2];
-//         cmd.motorCmd[motor_id].Kd = motorcmd[motor_id * 5 + 3];
-//         cmd.motorCmd[motor_id].tau = motorcmd[motor_id * 5 + 4];
-//     }
-//     safe.PositionLimit(cmd);
-//     udp.SetSend(cmd);
-//     udp.Send();
-// }
+void RobotInterface::InitSend() {
+    InitEnvironment();
+    cmd.levelFlag = LOWLEVEL;
+    for(int i = 0; i<12; i++){
+        cmd.motorCmd[i].mode = 0x0A;   // motor switch to servo (PMSM) mode
+        cmd.motorCmd[i].q = PosStopF;        // 禁止位置环
+        cmd.motorCmd[i].Kp = 0;
+        cmd.motorCmd[i].dq = VelStopF;        // 禁止速度环
+        cmd.motorCmd[i].Kd = 0;
+        cmd.motorCmd[i].tau = 0;
+    }
+    safe.PositionLimit(cmd);
+    udp.SetSend(cmd);
+    udp.Send();
+}
+
+void RobotInterface::SendCommand(std::array<double,60> motorcmd) {
+    cmd.levelFlag = 0xff;
+    for (int motor_id = 0; motor_id < 12; motor_id++) {
+        cmd.motorCmd[motor_id].mode = 0x0A;
+        cmd.motorCmd[motor_id].q = motorcmd[motor_id * 5];
+        cmd.motorCmd[motor_id].Kp = motorcmd[motor_id * 5 + 1];
+        cmd.motorCmd[motor_id].dq = motorcmd[motor_id * 5 + 2];
+        cmd.motorCmd[motor_id].Kd = motorcmd[motor_id * 5 + 3];
+        cmd.motorCmd[motor_id].tau = motorcmd[motor_id * 5 + 4];
+    }
+    safe.PositionLimit(cmd);
+    udp.SetSend(cmd);
+    udp.Send();
+}
 
 
 
 
 std::string doc()
 {
-   InitEnvironment();
    return "A1 Robot Julia Bindings";
 }
 
@@ -122,7 +156,12 @@ JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
 
     mod.add_type<RobotInterface>("RobotInterface")
     .method("getFootForce", &RobotInterface::getFootForce)
-    .method("getMotorState", &RobotInterface::getMotorState);
+    .method("getIMU", &RobotInterface::getIMU)
+    .method("getMotorStateQ", &RobotInterface::getMotorStateQ)
+    .method("getMotorStateDQ", &RobotInterface::getMotorStateDQ)
+    .method("getMotorStateDDQ", &RobotInterface::getMotorStateDDQ)
+    .method("getMotorStateTau", &RobotInterface::getMotorStateTau)
+    .method("InitSend", &RobotInterface::InitSend);
     // .method("ReceiveObservation", &RobotInterface::ReceiveObservation);
     // .method("ReceiveObservation", &RobotInterface::ReceiveObservation);
     // .method("SendCommand", &RobotInterface::SendCommand);
