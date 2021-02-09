@@ -30,7 +30,7 @@ public:
 
     void InitSend();
 
-    void SendCommand(std::array<double,60> motorcmd);
+    void SendCommand();
 
 
     // function for Julia
@@ -52,6 +52,9 @@ public:
         return state.motorState[idx].tauEst;
     }
 
+    // functions to set control cmd 
+    void setCmdMotorTau(int motor_id, float tau);
+
     IMU getIMU() {
         return state.imu;
     }
@@ -65,7 +68,7 @@ public:
 
 void RobotInterface::ReceiveObservation() {
     while(1) {
-        sleep(0.01);
+        sleep(0.002);
         // std::cout << udp.targetIP << std::endl;
         udp.Recv();
         // std::cout << "receive" << std::endl;
@@ -92,16 +95,20 @@ void RobotInterface::InitSend() {
     udp.Send();
 }
 
-void RobotInterface::SendCommand(std::array<double,60> motorcmd) {
-    cmd.levelFlag = 0xff;
-    for (int motor_id = 0; motor_id < 12; motor_id++) {
-        cmd.motorCmd[motor_id].mode = 0x0A;
-        cmd.motorCmd[motor_id].q = motorcmd[motor_id * 5];
-        cmd.motorCmd[motor_id].Kp = motorcmd[motor_id * 5 + 1];
-        cmd.motorCmd[motor_id].dq = motorcmd[motor_id * 5 + 2];
-        cmd.motorCmd[motor_id].Kd = motorcmd[motor_id * 5 + 3];
-        cmd.motorCmd[motor_id].tau = motorcmd[motor_id * 5 + 4];
-    }
+void RobotInterface::setCmdMotorTau(int motor_id, float tau) {
+    cmd.motorCmd[motor_id].tau = tau;
+}
+
+void RobotInterface::SendCommand() {
+    cmd.levelFlag = LOWLEVEL;
+    // for (int motor_id = 0; motor_id < 12; motor_id++) {
+    //     cmd.motorCmd[motor_id].mode = 0x0A;
+    //     cmd.motorCmd[motor_id].q = motorcmd[motor_id * 5];
+    //     cmd.motorCmd[motor_id].Kp = motorcmd[motor_id * 5 + 1];
+    //     cmd.motorCmd[motor_id].dq = motorcmd[motor_id * 5 + 2];
+    //     cmd.motorCmd[motor_id].Kd = motorcmd[motor_id * 5 + 3];
+    //     cmd.motorCmd[motor_id].tau = motorcmd[motor_id * 5 + 4];
+    // }
     safe.PositionLimit(cmd);
     udp.SetSend(cmd);
     udp.Send();
@@ -162,7 +169,9 @@ JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
     .method("getMotorStateDQ", &RobotInterface::getMotorStateDQ)
     .method("getMotorStateDDQ", &RobotInterface::getMotorStateDDQ)
     .method("getMotorStateTau", &RobotInterface::getMotorStateTau)
-    .method("InitSend", &RobotInterface::InitSend);
+    .method("InitSend", &RobotInterface::InitSend)
+    .method("SendCommand", &RobotInterface::SendCommand)
+    .method("setCmdMotorTau", &RobotInterface::setCmdMotorTau);
     // .method("ReceiveObservation", &RobotInterface::ReceiveObservation);
     // .method("ReceiveObservation", &RobotInterface::ReceiveObservation);
     // .method("SendCommand", &RobotInterface::SendCommand);
