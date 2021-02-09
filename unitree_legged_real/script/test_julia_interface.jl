@@ -119,39 +119,41 @@ module A1Robot
   function __init__()
     @initcxx
   end
-  export LowState
+  
+  function getFbkState!(itf::RobotInterface, fbk_state::LowState)
+    fbk_state.footForce[1]= getFootForce(itf, C_FR_)
+    fbk_state.footForce[2]= getFootForce(itf, C_FL_)
+    fbk_state.footForce[3]= getFootForce(itf, C_RR_)
+    fbk_state.footForce[4]= getFootForce(itf, C_RL_)
+
+    for i=1:12
+      fbk_state.motorState[i].q  = getMotorStateQ(itf,i-1)
+      fbk_state.motorState[i].dq  = getMotorStateDQ(itf,i-1)
+      fbk_state.motorState[i].ddq  = getMotorStateDDQ(itf,i-1)
+      fbk_state.motorState[i].tauEst  = getMotorStateTau(itf,i-1)
+    end
+    fbk_state.imu = getIMU(itf)
+  end
+  
 end
 
 
-
-@show A1Robot.doc()
-A1Robot.doc()
-b = A1Robot.RobotInterface()
-# must intialize the robot 
-A1Robot.InitSend(b)
+robot = A1Robot.RobotInterface()
 fbk_state = A1Robot.LowState()
+
+# @show A1Robot.doc()
+# A1Robot.doc()
+# b = A1Robot.RobotInterface()
+# must intialize the robot 
+# A1Robot.InitSend(b)
+# fbk_state = A1Robot.LowState()
 # @show d = A1Robot.ReceiveObservation(b)
 # c = A1Robot.IMU()
 
-while true
-    sleep(0.01)
-    # there is actually an index mismatch
-    # @show A1Robot.getFootForce(b,A1Robot.FR_)
-    fbk_state.footForce[1]=A1Robot.getFootForce(b,A1Robot.C_FR_)
-    fbk_state.footForce[2]=A1Robot.getFootForce(b,A1Robot.C_FL_)
-    fbk_state.footForce[3]=A1Robot.getFootForce(b,A1Robot.C_RR_)
-    fbk_state.footForce[4]=A1Robot.getFootForce(b,A1Robot.C_RL_)
+# while true
+#     sleep(0.01)
+#     A1Robot.getFbkState(b, fbk_state)
 
-    # k = zeros(Float32,12)
-    for i=1:12
-      # k[i] = A1Robot.getMotorStateQ(b,i-1)
-      fbk_state.motorState[i].q  = A1Robot.getMotorStateQ(b,i-1)
-      fbk_state.motorState[i].dq  = A1Robot.getMotorStateDQ(b,i-1)
-      fbk_state.motorState[i].ddq  = A1Robot.getMotorStateDDQ(b,i-1)
-      fbk_state.motorState[i].tauEst  = A1Robot.getMotorStateTau(b,i-1)
-    end
-    fbk_state.imu = A1Robot.getIMU(b)
-
-    # now fbk_state are filled with most of the sensor data from the robot
-    @show fbk_state.imu.rpy
-end
+#     # now fbk_state are filled with most of the sensor data from the robot
+#     @show fbk_state.imu.rpy
+# end

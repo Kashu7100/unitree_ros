@@ -21,6 +21,7 @@ public:
         // InitEnvironment();
         thread_ = std::thread(&RobotInterface::ReceiveObservation, this);
         udp.InitCmdData(cmd);
+        InitSend();
     }
     ~RobotInterface() {
         thread_.join(); 
