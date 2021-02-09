@@ -46,7 +46,7 @@ try
     tgt_p = init_p + [0.13;0;0]
     mid_p = (tgt_p+init_p)/2+[0;-0.08;0.08]
     ref_p_list = [init_p mid_p tgt_p init_p]
-    ref_t_list = [0.0,1.0,2.0,3.0]
+    ref_t_list = [0.0,1.0/3.0,2.0/3.0,1.0]
 
     start_t = Dates.DateTime(now())
     cur_period_t = 0;
@@ -55,7 +55,7 @@ try
         sleep(0.002)
         current_t = Dates.DateTime(now())
         total_run_time = Dates.value.((current_t-start_t))/1000.0
-        cur_period_t = mod(total_run_time, 3)
+        cur_period_t = mod(total_run_time, 1)
 
         """ first read feedback through the RobotInterface, state is stored in fbk_state """
         A1Robot.getFbkState!(robot, fbk_state) # LowState is defined in test_julia_interface.jl
@@ -84,7 +84,7 @@ try
         c = A1Robot.getVelQuadraticForces(A1Robot.C_FR_,q_FR,dq_FR)
         grav = A1Robot.getGravityForces(A1Robot.C_FR_,q_FR)
 
-        Kp = diagm([80;80;80])
+        Kp = diagm([90;90;90])
         Kd = diagm([15;15;15])
 
         tau = J'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + J'*inv(J)'*M*inv(J)*(ref_a-dJ*dq_FR) + c + grav;
