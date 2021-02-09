@@ -1,6 +1,8 @@
 module A1Robot
   using CxxWrap
   using StaticArrays
+  using LinearAlgebra
+  using ModernRoboticsBook
 
   # define datastructure
   # /home/biorobotics/Documents/unitree_legged_sdk/include/unitree_legged_sdk/comm.h
@@ -134,12 +136,286 @@ module A1Robot
     end
     fbk_state.imu = getIMU(itf)
   end
+
+
+  """ put robot kinematics, dynamics, fk, jacobian here , may need to move them around """
+  # data from https://github.com/unitreerobotics/unitree_ros/blob/master/robots/a1_description/xacro/const.xacro
+  const thigh_offset = 0.0838
+  const leg_offset_x = 0.1805
+  const leg_offset_y = 0.047
+  const thigh_length = 0.2
   
-end
+  const hip_mass    =   0.696
+  const hip_com_x   =  -0.003311
+  const hip_com_y   =   0.000635
+  const hip_com_z   =   0.000031
+  const hip_ixx     =   0.000469246
+  const hip_ixy     =  -0.000009409
+  const hip_ixz     =  -0.000000342
+  const hip_iyy     =   0.000807490
+  const hip_iyz     =  -0.000000466
+  const hip_izz     =   0.000552929
+
+  const thigh_mass  =  1.013
+  const thigh_com_x = -0.003237
+  const thigh_com_y = -0.022327
+  const thigh_com_z = -0.027326
+  const thigh_ixx   =  0.005529065
+  const thigh_ixy   =  0.000004825
+  const thigh_ixz   =  0.000343869
+  const thigh_iyy   =  0.005139339
+  const thigh_iyz   =  0.000022448
+  const thigh_izz   =  0.001367788
+
+  const calf_mass   =  0.166
+  const calf_com_x  =  0.006435
+  const calf_com_y  =  0.0
+  const calf_com_z  = -0.107388
+  const calf_ixx    =  0.002997972
+  const calf_ixy    =  0.0
+  const calf_ixz    = -0.000141163
+  const calf_iyy    =  0.003014022
+  const calf_iyz    =  0.0
+  const calf_izz    =  0.000032426
+
+  # get the fk of the leg 
+  # idx is the index of the leg (we use 0-3)
+  # q is the value of joint angles
+  function fk(idx::Int, q::Array{Float64,1})
+    # these two variables indicates the quadrant of the leg
+    front_hind = 1
+    mirror = -1
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = 1
+      mirror = 1
+    end
+    l = thigh_length
+    q1=q[1]; q2=q[2]; q3=q[3];
+    p = zeros(3)
+    p[1] = leg_offset_x*front_hind - l*sin(q2 + q3) - l*sin(q2)
+
+    p[2] = sin(q1)*(l*cos(q2 + q3) + l*cos(q2)) + thigh_offset*mirror*cos(q1) +leg_offset_y*mirror
+    p[3] =  - cos(q1)*(l*cos(q2 + q3) + l*cos(q2)) + thigh_offset*mirror*sin(q1)
+
+    return p
+  end
+
+  # the leg jacobian. 
+  function J(idx::Int, q::Array{Float64,1})
+    # these two variables indicates the quadrant of the leg
+    # when I derive J in matlab I have right leg define this d as possitive 
+    d = thigh_offset 
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+      d = -thigh_offset # left leg has negative d
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = -1
+      mirror = 1
+      d = -thigh_offset # left leg has negative d
+    end
+    l = thigh_length
+    q1=q[1]; q2=q[2]; q3=q[3];
+    J = zeros(3,3)
+    #J[1,1] = 0
+    J[1,2] = -l*(cos(q2 + q3) + cos(q2))
+    J[1,3] = -l*cos(q2 + q3)
+    J[2,1] = cos(q1)*(l*cos(q2 + q3) + l*cos(q2)) + d*sin(q1)
+    J[2,2] = -l*sin(q1)*(sin(q2 + q3) + sin(q2))
+    J[2,3] = -l*sin(q2 + q3)*sin(q1)
+    J[3,1] = sin(q1)*(l*cos(q2 + q3) + l*cos(q2)) - d*cos(q1)
+    J[3,2] = l*cos(q1)*(sin(q2 + q3) + sin(q2))
+    J[3,3] = l*sin(q2 + q3)*cos(q1)
+    return J
+  end
+
+  # the derivative of the leg jacobian. 
+  function dJ(idx::Int, q::Array{Float64,1}, dq::Array{Float64,1})
+    # these two variables indicates the quadrant of the leg
+    # when I derive J in matlab I have right leg define this d as possitive 
+    d = thigh_offset 
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+      d = -thigh_offset # left leg has negative d
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = -1
+      mirror = 1
+      d = -thigh_offset # left leg has negative d
+    end
+    l = thigh_length
+    q1=q[1]; q2=q[2]; q3=q[3];
+    dq1=dq[1]; dq2=dq[2]; dq3=dq[3];
+    dJ = zeros(3,3)
+    #J[1,1] = 0
+    dJ[1,2] = l*(sin(q2 + q3)*(dq2 + dq3) + dq2*sin(q2))
+    dJ[1,3] = l*sin(q2 + q3)*(dq2 + dq3)
+    dJ[2,1] = d*dq1*cos(q1) - dq1*sin(q1)*(l*cos(q2 + q3) + l*cos(q2)) - cos(q1)*(dq2*l*sin(q2) + l*sin(q2 + q3)*(dq2 + dq3))
+    dJ[2,2] = - l*sin(q1)*(cos(q2 + q3)*(dq2 + dq3) + dq2*cos(q2)) - dq1*l*cos(q1)*(sin(q2 + q3) + sin(q2))
+    dJ[2,3] = - l*cos(q2 + q3)*sin(q1)*(dq2 + dq3) - dq1*l*sin(q2 + q3)*cos(q1)
+    dJ[3,1] = dq1*cos(q1)*(l*cos(q2 + q3) + l*cos(q2)) - sin(q1)*(dq2*l*sin(q2) + l*sin(q2 + q3)*(dq2 + dq3)) + d*dq1*sin(q1)
+    dJ[3,2] = l*cos(q1)*(cos(q2 + q3)*(dq2 + dq3) + dq2*cos(q2)) - dq1*l*sin(q1)*(sin(q2 + q3) + sin(q2))
+    dJ[3,3] = l*cos(q2 + q3)*cos(q1)*(dq2 + dq3) - dq1*l*sin(q2 + q3)*sin(q1)
+    return dJ
+  end  
+
+  # get twist list (Slist), home configuration list (Mlist), inertia list (Glist)
+  # these definitions are from "ModernRobotics"
+
+  function getTwistList(idx::Integer)
+    # these two variables indicates the quadrant of the leg
+    front_hind = 1
+    mirror = -1
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = -1
+      mirror = 1
+    end
+    w1 = [1;0;0];
+    pq1 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror;
+            0];
+    w2 = [0;1;0];
+    pq2 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror + thigh_offset*mirror;
+            0];
+    w3 = [0;1;0];
+    pq3 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror + thigh_offset*mirror;
+            -thigh_length];
+    pf = [leg_offset_x*front_hind;
+          leg_offset_y*mirror + thigh_offset*mirror;
+          -2*thigh_length];
+    Slist = [[w1;-cross(w1,pq1)] [w2;-cross(w2,pq2)] [w3;-cross(w3,pq3)]];
+  end
+
+  function getMList(idx::Integer)
+    # these two variables indicates the quadrant of the leg
+    front_hind = 1
+    mirror = -1
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = -1
+      mirror = 1
+    end
+
+    pq1 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror;
+            0];
+    pq2 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror + thigh_offset*mirror;
+            0];
+    pq3 = [leg_offset_x*front_hind;
+           leg_offset_y*mirror + thigh_offset*mirror;
+            -thigh_length];
+    pf = [leg_offset_x*front_hind;
+          leg_offset_y*mirror + thigh_offset*mirror;
+          -2*thigh_length];
+
+    M1 = [I pq1+[hip_com_x*front_hind;hip_com_y*mirror;hip_com_z]; [0 0 0 1]];
+    M2 = [I pq2+[thigh_com_x;thigh_com_y*mirror;thigh_com_z]; [0 0 0 1]];
+    M3 = [I pq3+[calf_com_x;calf_com_y;calf_com_z]; [0 0 0 1]];
+    M4 = [I pf; [0 0 0 1]];
+
+    M01 = M1;
+    M12 = inv(M1)*M2;
+    M23 = inv(M2)*M3;
+    M34 = inv(M3)*M4;
+    
+    return [M01, M12, M23, M34]
+  end
+
+  function getGList()
+    I1 = [hip_ixx        hip_ixy        hip_ixz;
+      hip_ixy        hip_iyy        hip_iyz;
+      hip_ixz        hip_iyz        hip_izz ];
+        
+    G1 = [I1 zeros(3,3);
+      zeros(3,3) diagm([hip_mass, hip_mass, hip_mass])];
+
+    I2 = [thigh_ixx    thigh_ixy      thigh_ixx;
+      thigh_ixy    thigh_iyy      thigh_iyz;
+      thigh_ixz    thigh_iyz      thigh_izz ];
+    G2 = [I2 zeros(3,3);
+      zeros(3,3) diagm([thigh_mass, thigh_mass, thigh_mass])];
+
+    I3 = [calf_ixx    calf_ixy      calf_ixx;
+      calf_ixy    calf_iyy      calf_iyz;
+      calf_ixz    calf_iyz      calf_izz ];
+    G3 = [I3 zeros(3,3);
+      zeros(3,3) diagm([calf_mass, calf_mass, calf_mass])];
+
+    return [G1, G2, G3]
+  end
+
+  # this function calls ModernRoboticsBook
+  function getMassMtx(idx::Integer, q::Array{Float64,1})
+    MList = getMList(idx)
+    SList = getTwistList(idx)
+    GList = getGList()
+    return ModernRoboticsBook.MassMatrix(q, MList, GList, SList)
+  end
+
+  function getVelQuadraticForces(idx::Integer, q::Array{Float64,1}, dq::Array{Float64,1})
+    MList = getMList(idx)
+    SList = getTwistList(idx)
+    GList = getGList()
+    return ModernRoboticsBook.VelQuadraticForces(q, dq, MList, GList, SList)
+  end
+
+  function getGravityForces(idx::Integer, q::Array{Float64,1})
+    MList = getMList(idx)
+    SList = getTwistList(idx)
+    GList = getGList()
+    return ModernRoboticsBook.GravityForces(q, [0; 0; -9.8], MList, GList, SList)
+  end
+
+end # end of the module
 
 
-robot = A1Robot.RobotInterface()
-fbk_state = A1Robot.LowState()
+""" test cases for kinematics and dynamics """
+
+
+
+# robot = A1Robot.RobotInterface()
+# fbk_state = A1Robot.LowState()
 
 # @show A1Robot.doc()
 # A1Robot.doc()
