@@ -36,15 +36,25 @@ end
 # terminate the control loop by ctrl-c
 using Dates
 using LinearAlgebra
+const leg_ID = A1Robot.C_RR_;
+# const leg_ID = A1Robot.C_FR_;
 try
+    A1Robot.InitSend(robot)
     # get inital leg position, generate a trajectory 
-    """ get initial position of the FR leg """    
+    """ get initial position of the leg """    
     A1Robot.getFbkState!(robot, fbk_state)
-    q_FR = [fbk_state.motorState[1].q;fbk_state.motorState[2].q;fbk_state.motorState[3].q]
-    q_FR = convert(Array{Float64,1}, q_FR)
-    init_p = A1Robot.fk(A1Robot.C_FR_,q_FR) + [0;-0.02;0]
-    tgt_p = init_p + [0.13;0;0]
-    mid_p = (tgt_p+init_p)/2+[0;-0.08;0.08]
+    q = [fbk_state.motorState[leg_ID*3+1].q;fbk_state.motorState[leg_ID*3+2].q;fbk_state.motorState[leg_ID*3+3].q]
+    q = convert(Array{Float64,1}, q)
+    init_p = A1Robot.fk(leg_ID, q) 
+    if leg_ID == A1Robot.C_FR_ || leg_ID == A1Robot.C_RR_
+        init_p += [0;-0.02;0]
+        tgt_p = init_p + [0.13;0;0]
+        mid_p = (tgt_p+init_p)/2+[0;-0.08;0.08]
+    elseif leg_ID == A1Robot.C_FL_ || leg_ID == A1Robot.C_RL_
+        init_p += [0; 0.02;0]
+        tgt_p = init_p + [0.13;0;0]
+        mid_p = (tgt_p+init_p)/2+[0;0.08;0.08]
+    end
     ref_p_list = [init_p mid_p tgt_p init_p]
     ref_t_list = [0.0,1.0/3.0,2.0/3.0,1.0]
 
@@ -66,35 +76,35 @@ try
         # end
         # @show k
 
-        q_FR = [fbk_state.motorState[1].q;fbk_state.motorState[2].q;fbk_state.motorState[3].q]
-        dq_FR = [fbk_state.motorState[1].dq;fbk_state.motorState[2].dq;fbk_state.motorState[3].dq]
-        q_FR = convert(Array{Float64,1}, q_FR)
-        dq_FR = convert(Array{Float64,1}, dq_FR)
+        q = [fbk_state.motorState[leg_ID*3+1].q;fbk_state.motorState[leg_ID*3+2].q;fbk_state.motorState[leg_ID*3+3].q]
+        dq = [fbk_state.motorState[leg_ID*3+1].dq;fbk_state.motorState[leg_ID*3+2].dq;fbk_state.motorState[leg_ID*3+3].dq]
+        q = convert(Array{Float64,1}, q)
+        dq = convert(Array{Float64,1}, dq)
         
 
         """ generate a minimum jerk trajectory for the FR leg """
         ref_p, ref_v, ref_a = hermite_cubic_traj(ref_p_list, ref_t_list, cur_period_t)
         
         """ generate control torque using the kinematics and dynamics of the robot """
-        J = A1Robot.J(A1Robot.C_FR_, q_FR)
-        dJ = A1Robot.dJ(A1Robot.C_FR_, q_FR, dq_FR)
-        p = A1Robot.fk(A1Robot.C_FR_,q_FR)
-        v = J*dq_FR
-        M = A1Robot.getMassMtx(A1Robot.C_FR_,q_FR)
-        c = A1Robot.getVelQuadraticForces(A1Robot.C_FR_,q_FR,dq_FR)
-        grav = A1Robot.getGravityForces(A1Robot.C_FR_,q_FR)
+        J = A1Robot.J(leg_ID, q)
+        dJ = A1Robot.dJ(leg_ID, q, dq)
+        p = A1Robot.fk(leg_ID,q)
+        v = J*dq
+        M = A1Robot.getMassMtx(leg_ID,q)
+        c = A1Robot.getVelQuadraticForces(leg_ID,q,dq)
+        grav = A1Robot.getGravityForces(leg_ID,q)
 
         Kp = diagm([90;90;90])
         Kd = diagm([15;15;15])
 
-        tau = J'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + J'*inv(J)'*M*inv(J)*(ref_a-dJ*dq_FR) + c + grav;
+        tau = J'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + J'*inv(J)'*M*inv(J)*(ref_a-dJ*dq) + c + grav;
         @show tau
 
         # tau = zeros(Float32, 3)
         """ send control torque to the robot """
-        A1Robot.setCmdMotorTau(robot, A1Robot.C_FR_0, Float32(tau[1]))
-        A1Robot.setCmdMotorTau(robot, A1Robot.C_FR_1, Float32(tau[2]))
-        A1Robot.setCmdMotorTau(robot, A1Robot.C_FR_2, Float32(tau[3]))
+        A1Robot.setCmdMotorTau(robot, leg_ID*3, Float32(tau[1]))
+        A1Robot.setCmdMotorTau(robot, leg_ID*3+1, Float32(tau[2]))
+        A1Robot.setCmdMotorTau(robot, leg_ID*3+2, Float32(tau[3]))
 
         A1Robot.SendCommand(robot)
     end
