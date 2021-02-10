@@ -149,3 +149,59 @@ torque_lcm
 The `velocity_lcm` and `torque_lcm` have to run under root account too. Please use the same method as runing `real_launch`.
 
 And when you run the high level controller, please make sure the robot is standing on the ground. The high level only has `walk_lcm`.
+
+
+## julia interface
+
+### Installation
+**Make sure the computer runs the Julia robotinterface is in the same LAN network with the Unitree A1 robot (you should be able to `ping 192.168.123.10` on this computer).**
+
+1. First install https://github.com/JuliaInterop/libcxxwrap-julia according to its README
+
+    A small problem I found is when building this project, we must specify julia prefix as well:
+    ```
+    cmake -DJulia_PREFIX=/home/biorobotics/Documents/julia_program_files/julia-1.5.3 -DJulia_EXECUTABLE=/home/biorobotics/Documents/julia_program_files/julia-1.5.3/bin/julia ..
+    ```
+    (change "/home/biorobotics/Documents/julia_program_files/julia-1.5.3" to the path of the julia directory on your system)
+
+2. Then modify `~/.julia/artifacts/Overrides.toml` according to https://github.com/JuliaInterop/CxxWrap.jl
+https://github.com/JuliaInterop/libcxxwrap-julia#using-the-compiled-libcxxwrap-julia-in-cxxwrap
+Add this overrides is very important. On my system, my libcxxwrap-julia is at
+    ```
+    libcxxwrap_julia = "/home/biorobotics/Documents/julia_program_files/libcxxwrap-julia/build"
+    ```
+3. Now we can compile this repo. Notice in the **unitree_legged_real/CMakeLists.txt** we have following lines indicating the path to libcxxwrap-julia   
+    ```
+    set(JlCxx_DIR /home/biorobotics/Documents/julia_program_files/libcxxwrap-julia/build)
+    set(Julia_PREFIX /home/biorobotics/Documents/julia_program_files/julia-1.5.3) 
+    set(Julia_EXECUTABLE /home/biorobotics/Documents/julia_program_files/julia-1.5.3/bin/julia)
+    ```
+    Please modify them according to your own installation. 
+4. After compilation, a cxxwrap .so file will be generated in ROS workspace contains the unitree_ros package. On my system the file locates at
+    ```
+    /home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib/
+    ```
+   In **unitree_legged_real/script/julia_robot_interface.jl**, modify line 126 to be the correct location of the .so file on your system
+   ```
+   @wrapmodule("/home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib/libjulia_a1_interface.so")
+   ```
+5. Unitree SDK requires root previlege so we have to run the robot interface as root user. Use `sudo su` to switch to root. Then add julia to root's bash PATH (or add following lines to root's ~/.bashrc file)
+    ```
+    source /home/biorobotics/ros_workspaces/unitree_ws/devel/setup.bash
+    export PATH="$PATH:/home/biorobotics/Documents/julia_program_files/julia-1.5.3/bin"
+    ```
+    where `unitree_ws` is the ROS workspace you used to compile unitree_ros. Please adjust them accordingly. 
+6. Read unitree_legged_real/script/julia_robot_interface.jl to know its dependent packages. **Install them for the root user*.* Also, modify `~/.julia/artifacts/Overrides.toml` for the root user as well.
+
+6. **As the root user**, cd to the location of `unitree_legged_real/script/`. Start Julia REPL. Then start the Julia RobotInterface by
+    ```
+    include("julia_robot_interface.jl")
+    ```
+    **Be careful when working with the hardware. Make sure the robot is hanged up during the initial test**
+7. There are two test scripts now. `unitree_legged_real/script/read_check_joint_angles.jl` read and print the joint angles of the robot. `unitree_legged_real/script/test_julia_swing_ctrl.jl` runs swing leg control with dynamics compensition. To try these scripts, simple include them
+   ```
+   include("read_check_joint_angles.jl")
+   ```
+   The script will create a loop to read joint angles. Press ctrl-c to exist the loop.
+
+   test_julia_swing_ctrl.jl will move the front right leg of the robot, so be careful the front right leg has enough space to move. 

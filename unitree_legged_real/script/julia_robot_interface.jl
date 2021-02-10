@@ -1,3 +1,10 @@
+""" 
+caution! when including this module in julia, 
+and robot = A1Robot.RobotInterface() is called,
+the robot will receive a initialize command and fall down in place
+
+"""
+
 module A1Robot
   using CxxWrap
   using StaticArrays
@@ -195,7 +202,7 @@ module A1Robot
       front_hind = -1
       mirror = -1
     else
-      front_hind = 1
+      front_hind = -1
       mirror = 1
     end
     l = thigh_length
