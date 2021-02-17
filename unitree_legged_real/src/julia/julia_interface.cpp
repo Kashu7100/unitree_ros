@@ -24,6 +24,7 @@ public:
         InitSend();
     }
     ~RobotInterface() {
+        destruct = true;
         thread_.join(); 
     }
     void ReceiveObservation();
@@ -64,10 +65,11 @@ public:
     LowState state = {0};
     LowCmd cmd = {0};
     std::thread thread_;
+    bool destruct = false;
 };
 
 void RobotInterface::ReceiveObservation() {
-    while(1) {
+    while(destruct == false) {
         sleep(0.002);
         // std::cout << udp.targetIP << std::endl;
         udp.Recv();
