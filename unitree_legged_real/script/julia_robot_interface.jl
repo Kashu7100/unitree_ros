@@ -123,6 +123,29 @@ module A1Robot
   const C_RL_1 = 10;
   const C_RL_2 = 11;
 
+
+  # leg indices for Julia 
+  const FR_ = 1
+  const FL_ = 2
+  const RR_ = 3
+  const RL_ = 4
+
+  const FR_0 = 1;     
+  const FR_1 = 2;      
+  const FR_2 = 3;
+
+  const FL_0 = 4;
+  const FL_1 = 5;
+  const FL_2 = 6;
+
+  const RR_0 = 7;
+  const RR_1 = 8;
+  const RR_2 = 9;
+
+  const RL_0 = 10;
+  const RL_1 = 11;
+  const RL_2 = 12;
+
   @wrapmodule("/home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib/libjulia_a1_interface.so")
 
   function __init__()

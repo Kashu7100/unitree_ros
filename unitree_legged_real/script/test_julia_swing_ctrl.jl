@@ -12,6 +12,7 @@ using Dates
 using LinearAlgebra
 
 include("utils.jl")
+# include("init_robot.jl")
 
 const leg_ID = A1Robot.C_RR_;
 # const leg_ID = A1Robot.C_FR_;
@@ -39,7 +40,7 @@ try
     cur_period_t = 0;
     while true
         """ this control loop runs 500Hz """
-        sleep(0.002)
+        sleep(0.01)
         current_t = Dates.DateTime(now())
         total_run_time = Dates.value.((current_t-start_t))/1000.0
         cur_period_t = mod(total_run_time, 1)
@@ -47,11 +48,11 @@ try
         """ first read feedback through the RobotInterface, state is stored in fbk_state """
         A1Robot.getFbkState!(robot, fbk_state) # LowState is defined in test_julia_interface.jl
         # debug print to show we get 
-        # k = zeros(Float32,3)
-        # for i=1:3
-        #     k[i] = fbk_state.motorState[i].tauEst
-        # end
-        # @show k
+        k = zeros(Float32,3)
+        for i=1:3
+            k[i] = fbk_state.motorState[i].tauEst
+        end
+        @show k
 
         q = [fbk_state.motorState[leg_ID*3+1].q;fbk_state.motorState[leg_ID*3+2].q;fbk_state.motorState[leg_ID*3+3].q]
         dq = [fbk_state.motorState[leg_ID*3+1].dq;fbk_state.motorState[leg_ID*3+2].dq;fbk_state.motorState[leg_ID*3+3].dq]
@@ -75,7 +76,7 @@ try
         Kd = diagm([15;15;15])
 
         tau = J'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + J'*inv(J)'*M*inv(J)*(ref_a-dJ*dq) + c + grav;
-        @show tau
+        # @show tau
 
         # tau = zeros(Float32, 3)
         """ send control torque to the robot """
