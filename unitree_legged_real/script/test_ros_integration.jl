@@ -1,3 +1,4 @@
+""" just an empty ros loop to trigger callback processing """
 # using RobotOS
 # @rosimport sensor_msgs.msg: Imu, Joy
 # rostypegen()
@@ -24,11 +25,12 @@ try
     while true
         """ this control loop runs 10Hz """
         
-        println(joy_data.axes)
+        # println(joy_data.axes)
+        # println(body_pose.orientation)
 
         """ read imu from ros  """
         
-        # rossleep(loop_rate)
+        rossleep(loop_rate)
     end
 catch e
     if e isa InterruptException
