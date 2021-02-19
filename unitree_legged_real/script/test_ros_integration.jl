@@ -13,6 +13,7 @@
 # now julia REPL is a rosnode
 # finally include this file 
 
+# include("init_sim_robot.jl")
 # standard wrapper to stop the program
 try
     # function callback(msg::sensor_msgs.msg.Joy, pub_obj::Publisher{sensor_msgs.msg.Imu})
@@ -25,8 +26,10 @@ try
     while true
         """ this control loop runs 10Hz """
         
-        # println(joy_data.axes)
-        # println(body_pose.orientation)
+        println(joy_data.axes)
+        println(body_pose.orientation)
+        println(fbk_state.footForce)
+        println(fbk_state.motorState[1])
 
         """ read imu from ros  """
         

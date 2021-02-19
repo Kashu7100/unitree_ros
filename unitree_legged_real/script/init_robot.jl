@@ -6,6 +6,11 @@ Then we convert the current Julia REPL into a ros node
 # start A1Robot nterface
 include("julia_robot_interface.jl")
 
+""" init the robot """
+robot = A1Robot.RobotInterface()
+fbk_state = A1Robot.LowState()
+A1Robot.InitSend(robot)
+
 """ ROS related """
 # convert the current Julia REPL as ros node
 using RobotOS
@@ -17,6 +22,7 @@ using .geometry_msgs.msg
 init_node("rosjl",disable_signals="True")
 # initialize necessary publisher, subscriber and callbacks
 joy_data = sensor_msgs.msg.Joy()
+joy_data.buttons = zeros(11)
 joy_data.axes = zeros(Float32,8)
 function joy_stick_callback(msg::sensor_msgs.msg.Joy, out_data::sensor_msgs.msg.Joy)
     # pt_msg = Point(msg.point.x, msg.point.y, 0.0)

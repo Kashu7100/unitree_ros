@@ -444,9 +444,6 @@ end # end of the module
 
 
 
-robot = A1Robot.RobotInterface()
-fbk_state = A1Robot.LowState()
-
 # @show A1Robot.doc()
 # A1Robot.doc()
 # b = A1Robot.RobotInterface()
