@@ -9,4 +9,4 @@ uint8[40] wirelessRemote
 uint32 reserve                  # Old version Aliengo does not have
 uint32 crc
 
-Cartesian[4] ff               # will delete # Old version Aliengo does not have
+CartesianMsg[4] ff               # will delete # Old version Aliengo does not have
