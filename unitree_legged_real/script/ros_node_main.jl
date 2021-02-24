@@ -184,6 +184,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
     q_list = zeros(3,4)  # FR, FL, RR, RL
     dq_list = zeros(3,4)  # FR, FL, RR, RL
 
+    rossleep(Rate(Duration(3)))
     """ get init robot position """
     ref_base_position = [base_state.position[1];
                          base_state.position[2];
@@ -196,7 +197,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
     #TODO: add a scheduling
     foot_contact = [1,1,1,1]
 
-    mass = 12.2
+    mass = 11.2
     mg = @SVector[0,0,mass*9.81]
     normal_load = mg/4.0
     F_prev = vcat(normal_load,normal_load,normal_load,normal_load)
@@ -219,7 +220,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
     # the three parameters of the QP, different F components have different value    
     alpha_x = alpha_y = alpha_z = 2     
     beta_x = beta_y = beta_z = 0.3          
-    s_vec = [1,1,10,55,55,55]  
+    s_vec = [1,1,1,1,1,1]  
     S = diagm(s_vec)
     S = SMatrix{6,6}(S)  
     alpha_vec = [alpha_x,alpha_y,alpha_z]  
@@ -266,15 +267,15 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
             break
         end
         # curr_base_yaw, curr_base_roll, curr_base_pitch = quat_to_euler(curr_base_quat)
-        curr_base_quat_tilt, curr_base_quat_torsion = quat_decompose_tilt_torsion(curr_base_quat)
+        curr_base_quat_tilt, curr_base_quat_torsion = quat_decompose_tilt_torsion(conj(curr_base_quat))
         curr_base_yrp[1], curr_base_yrp[2], curr_base_yrp[3] = quat_to_euler(curr_base_quat_tilt)
-        # println(curr_base_yrp/pi*180)
+        println(curr_base_yrp/pi*180)
         # println("state_quat")
         # println([yaw/pi*180.0, roll/pi*180.0, pitch/pi*180.0])
 
         # show(stdout, "text/plain", curr_base_yrp/pi*180)
         # println(q_list[3,2])
-        println(fbk_state.imu.gyroscope)
+        # println(fbk_state.imu.gyroscope)
         # println(fbk_state.motorState[1].q)
         # println(joy_data.axes)
 
@@ -307,15 +308,17 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
             end
 
             q_tgt = UnitQuaternion(1.0,0.0,0.0,0.0)
-            q_err = q_tgt*conj(curr_base_quat_tilt)
+            # q_err = q_tgt*conj(curr_base_quat)
+            q_err = curr_base_quat*conj(q_tgt)
+
 
             current_w = fbk_state.imu.gyroscope
 
             # println("current_w")
             # println(current_w)
 
-            Kp_w_val = 0.0
-            Kd_w_val = 0.0
+            Kp_w_val = 0
+            Kd_w_val = 0
             Kp = diagm([Kp_w_val;Kp_w_val;Kp_w_val])
             Kd = diagm([Kd_w_val;Kd_w_val;Kd_w_val])
             Inertia = diagm([0.17;0.13;0.17])
@@ -325,14 +328,14 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
             obj = Inertia*e_w
             # @printf("%6.4f \t %6.4f \t %6.4f \n", obj[1],obj[2],obj[3])
 
-            # println(ref_base_position)
-            # println(curr_base_pos)
+            println(ref_base_position)
+            println(curr_base_pos)
 
             # construct QP
-            Kp_a_val = 0.0
-            Kd_a_val = 0.0
-            Kp_a = diagm([0.0;0.0;Kp_a_val])
-            Kd_a = diagm([0.0;0.0;Kd_a_val])
+            Kp_a_val = 10
+            Kd_a_val = 1
+            Kp_a = diagm([Kp_a_val;Kp_a_val;Kp_a_val])
+            Kd_a = diagm([Kd_a_val;Kd_a_val;Kd_a_val])
             ref_body_vel = [0;0;standup_down_z_vel]
             tgt_a = Kp_a*(ref_base_position-curr_base_pos)+Kd_a*(-curr_base_vel)
             # println(tgt_a)
@@ -406,10 +409,10 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
                 # println(vcat(foot_tau,foot_F))
                 # show(stdout, "text/plain", F)
                 tau = A1Robot.stance_torque_ctrl(leg_ID, q_list[:,i], Array(foot_F))
-                println(tau)
-                println([fbk_state.motorState[leg_ID*3+1].tauEst;
-                         fbk_state.motorState[leg_ID*3+2].tauEst;
-                         fbk_state.motorState[leg_ID*3+3].tauEst;])
+                # println(tau)
+                # println([fbk_state.motorState[leg_ID*3+1].tauEst;
+                #          fbk_state.motorState[leg_ID*3+2].tauEst;
+                        #  fbk_state.motorState[leg_ID*3+3].tauEst;])
                 # tau = torque_ctrl(leg_ID, ref_p, ref_v, ref_a, q_list[:,i], dq_list[:,i], foot_F)
                 # A1Robot.setCmdMotorTau(robot, leg_ID*3, Float32(tau[1]))
                 # A1Robot.setCmdMotorTau(robot, leg_ID*3+1, Float32(tau[2]))
