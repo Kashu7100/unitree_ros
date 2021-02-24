@@ -1,15 +1,29 @@
 """ 
 caution! when including this module in julia, 
-and robot = A1Robot.RobotInterface() is called,
+and robot = RobotInterface() is called,
 the robot will receive a initialize command and fall down in place
 
 """
+
+
 
 module A1Robot
   using CxxWrap
   using StaticArrays
   using LinearAlgebra
   using ModernRoboticsBook
+  # using RobotOS
+  
+  # @rosimport sensor_msgs.msg: Imu, Joy
+  # @rosimport nav_msgs.msg: Odometry
+  # @rosimport geometry_msgs.msg: Pose, Twist, QuaternionStamped, WrenchStamped
+  # @rosimport unitree_legged_msgs.msg: MotorCmd, MotorState
+  # rostypegen(@__MODULE__)
+
+  # using .sensor_msgs.msg
+  # using .nav_msgs.msg
+  # using .geometry_msgs.msg
+  # using .unitree_legged_msgs.msg
 
   # define datastructure
   # /home/biorobotics/Documents/unitree_legged_sdk/include/unitree_legged_sdk/comm.h
@@ -21,13 +35,28 @@ module A1Robot
   end
 
   mutable struct IMU
-    quaternion::SVector{3,Float32}
-    gyroscope::SVector{3,Float32}
-    accelerometer::SVector{3,Float32}
-    rpy::SVector{3,Float32}
+    quaternion::Array{Float64,1}
+    gyroscope::Array{Float64,1}
+    accelerometer::Array{Float64,1}
+    rpy::Array{Float64,1}
     temperature::Int8
-    IMU() = new()
+    IMU() = new(zeros(4),zeros(3),zeros(3),zeros(3),0)
   end
+
+
+  mutable struct Joy
+    axes::Array{Float32,1}
+    buttons::Array{Int32,1}
+    Joy() = new(zeros(Float32,8),zeros(Int32,11))
+  end
+
+  mutable struct BaseState
+    position::Array{Float64,1}
+    velocity::Array{Float64,1}
+    orientation::Array{Float64,1}
+    BaseState() = new(zeros(Float64,3),zeros(Float64,3),zeros(Float64,4))
+  end
+
 
   mutable struct LED
     r::UInt8
@@ -416,6 +445,11 @@ module A1Robot
   end
 
   # this function calls ModernRoboticsBook
+  function getSpatialJ(idx::Integer, q::Array{Float64,1})
+    SList = getTwistList(idx)
+    return ModernRoboticsBook.JacobianSpace(SList, q)
+  end
+
   function getMassMtx(idx::Integer, q::Array{Float64,1})
     MList = getMList(idx)
     SList = getTwistList(idx)
@@ -437,6 +471,66 @@ module A1Robot
     return ModernRoboticsBook.GravityForces(q, [0; 0; -9.8], MList, GList, SList)
   end
 
+  """ functions to control the robot """
+  # Cartesian space torque control 
+  # input reference position, velocity, acc (probably from a trajectory)
+  # input feedback joint angle, joint angular velocity
+  # input desired foot force (in body frame)
+  # output desired leg joint torque
+  function torque_ctrl(leg_ID::Int, 
+      ref_p::Vector{Float64}, ref_v::Vector{Float64}, ref_a::Vector{Float64},
+      q::Vector{Float64}, dq::Vector{Float64}, F::Vector{Float64})::Vector{Float64}
+      
+      Jb = J(leg_ID, q)
+      dJ = dJ(leg_ID, q, dq)
+      p = fk(leg_ID,q)
+      v = Jb*dq
+      M = getMassMtx(leg_ID,q)
+      c = getVelQuadraticForces(leg_ID,q,dq)
+      grav = getGravityForces(leg_ID,q)
+
+      Kp = diagm([90;90;90])
+      Kd = diagm([15;15;15])
+
+      tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + Jb'*inv(Jb)'*M*inv(Jb)*(ref_a-dJ*dq) + c + grav;
+      # add the foot force 
+      tau = tau + Jb'*F
+      return tau
+  end
+
+  function stance_torque_ctrl(leg_ID::Int, q::Vector{Float64}, F::Vector{Float64})::Vector{Float64}
+      # J = getSpatialJ(leg_ID, q)
+      Jb = J(leg_ID, q)
+      tau = Jb'*F
+      return tau
+  end
+
+  # # put data structure in the module
+  # fbk_state = LowState()
+  # joy_data_axes = zeros(Float32,8)
+  # joy_data_buttons = zeros(Int16,11)
+  # body_position = zeros(3)
+  # body_orientation = zeros(4)
+  # body_velocity  = zeros(3) 
+  
+
+  # function init_fbk()
+  #   fbk_state = LowState()
+  #   joy_data_axes = zeros(Float32,8)
+  #   joy_data_buttons = zeros(Int16,11)
+  #   body_position = zeros(3)
+  #   body_orientation = zeros(4)
+  #   body_velocity  = zeros(3) 
+  #   for i=1:4
+  #     fbk_state.footForce[i] = 0
+  #   end
+  #   for i=1:12
+  #       fbk_state.motorState[i].q = 0.01
+  #       fbk_state.motorState[i].dq = 0.0
+  #   end
+  #   body_orientation[1] = 1
+  # end
+
 end # end of the module
 
 
@@ -444,18 +538,18 @@ end # end of the module
 
 
 
-# @show A1Robot.doc()
-# A1Robot.doc()
-# b = A1Robot.RobotInterface()
+# @show doc()
+# doc()
+# b = RobotInterface()
 # must intialize the robot 
-# A1Robot.InitSend(b)
-# fbk_state = A1Robot.LowState()
-# @show d = A1Robot.ReceiveObservation(b)
-# c = A1Robot.IMU()
+# InitSend(b)
+# fbk_state = LowState()
+# @show d = ReceiveObservation(b)
+# c = IMU()
 
 # while true
 #     sleep(0.01)
-#     A1Robot.getFbkState(b, fbk_state)
+#     getFbkState(b, fbk_state)
 
 #     # now fbk_state are filled with most of the sensor data from the robot
 #     @show fbk_state.imu.rpy
