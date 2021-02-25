@@ -178,7 +178,7 @@ end
 
 
 function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
-    ctrl_hz = 100.0
+    ctrl_hz = 250.0
     ctrl_dt = 1.0/ctrl_hz
     loop_rate = Rate(ctrl_hz)   
     q_list = zeros(3,4)  # FR, FL, RR, RL
@@ -197,15 +197,15 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
     #TODO: add a scheduling
     foot_contact = [1,1,1,1]
 
-    mass = 11.2
+    mass = 12.5
     mg = @SVector[0,0,mass*9.81]
     normal_load = mg/4.0
     F_prev = vcat(normal_load,normal_load,normal_load,normal_load)
     # constants for QP
-    miu = 0.1
+    miu = 0.5
     Cb = @SMatrix [ 0    0    -1;
                     1    0  -miu;
-                -1    0  -miu;
+                   -1    0  -miu;
                     0    1  -miu;
                     0   -1  -miu]
     # TODO: make this sparse?
@@ -218,9 +218,9 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
         z3 z3 z3 Cb]
     C = SMatrix{20,12}(C)  
     # the three parameters of the QP, different F components have different value    
-    alpha_x = alpha_y = alpha_z = 2     
-    beta_x = beta_y = beta_z = 0.3          
-    s_vec = [1,1,1,1,1,1]  
+    alpha_x = alpha_y = alpha_z = 0.5
+    beta_x = beta_y = beta_z = 0.05         
+    s_vec = [1,1,1,30,30,30]  
     S = diagm(s_vec)
     S = SMatrix{6,6}(S)  
     alpha_vec = [alpha_x,alpha_y,alpha_z]  
@@ -231,14 +231,20 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
     beta_mtx = SMatrix{12,12}(beta_mtx)
 
     """ variables used in the loop """
-    curr_base_pos = zeros(3)
-    curr_base_vel = zeros(3)
-    curr_base_quat = UnitQuaternion(1.0,0.0,0.0,0.0)
-    curr_base_quat_tilt = UnitQuaternion(1.0,0.0,0.0,0.0)
-    curr_base_quat_torsion = UnitQuaternion(1.0,0.0,0.0,0.0)
-    curr_base_yrp = zeros(3)
+    # frame definition 
+    # e - world frame
+    # b - body frame 
+    p_eb = zeros(3)
+    v_eb = zeros(3)
+    q_eb = UnitQuaternion(1.0,0.0,0.0,0.0)
     leg_ID = 0.0
     leg_tau = zeros(3)
+
+    # debug pub
+    debug_pub = Publisher{geometry_msgs.msg.Quaternion}("rosjl/debug/point1", queue_size=1)
+    debug_point = geometry_msgs.msg.Quaternion()
+    debug_pub2 = Publisher{geometry_msgs.msg.Point}("rosjl/debug/point2", queue_size=1)
+    debug_point2 = geometry_msgs.msg.Point()
 
     while ! is_shutdown()
 
@@ -253,23 +259,22 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
         end  
         # get current base states
         for i=1:3
-            curr_base_pos[i] = base_state.position[i]
-            curr_base_vel[i] = base_state.velocity[i]
+            p_eb[i] = base_state.position[i]
+            v_eb[i] = base_state.velocity[i]
         end
-        curr_base_quat = UnitQuaternion(base_state.orientation[1],
-                                        base_state.orientation[2],
-                                        base_state.orientation[3],
-                                        base_state.orientation[4])
+        q_eb = UnitQuaternion(base_state.orientation[1],
+                              base_state.orientation[2],
+                              base_state.orientation[3],
+                              base_state.orientation[4])
 
         """ safety """
         if joy_data.buttons[5] == 1
             joy_data.buttons[5] = 0
             break
         end
-        # curr_base_yaw, curr_base_roll, curr_base_pitch = quat_to_euler(curr_base_quat)
-        curr_base_quat_tilt, curr_base_quat_torsion = quat_decompose_tilt_torsion(conj(curr_base_quat))
-        curr_base_yrp[1], curr_base_yrp[2], curr_base_yrp[3] = quat_to_euler(curr_base_quat_tilt)
-        println(curr_base_yrp/pi*180)
+        # curr_base_quat_tilt, curr_base_quat_torsion = quat_decompose_tilt_torsion(conj(curr_base_quat))
+        # curr_base_yrp[1], curr_base_yrp[2], curr_base_yrp[3] = quat_to_euler(curr_base_quat_tilt)
+        # println(curr_base_yrp/pi*180)
         # println("state_quat")
         # println([yaw/pi*180.0, roll/pi*180.0, pitch/pi*180.0])
 
@@ -283,9 +288,9 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
         if control_state == 0
             # control state 0, the standup state 
             # use joy stick axes 5 to control
-            joy_input = convert(Float64, joy_data.axes[5])
+            joy_input = convert(Float64, joy_data.axes[2])
             if (joy_input>0.2 || joy_input<-0.2)
-                standup_down_z_vel = 0.02*joy_input
+                standup_down_z_vel = 0.2*joy_input
             else
                 standup_down_z_vel = 0
             end            
@@ -307,50 +312,67 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
                 ref_base_position[3] = 0.3
             end
 
-            q_tgt = UnitQuaternion(1.0,0.0,0.0,0.0)
-            # q_err = q_tgt*conj(curr_base_quat)
-            q_err = curr_base_quat*conj(q_tgt)
+            tgt_yaw = joy_data.axes[1]*30/180*pi
+            tgt_roll = joy_data.axes[4]*30/180*pi
+            tgt_pitch = joy_data.axes[5]*30/180*pi
+
+            q_tilt, q_torsion = quat_decompose_tilt_torsion(q_eb)
+            q_tgt = q_torsion # TODO: get current yaw 
+            # q_tgt = UnitQuaternion(1.0,0.0,0.0,0.0) # TODO: get current yaw 
+            q_tgt = UnitQuaternion(RotZYX(tgt_yaw, tgt_roll, tgt_pitch)) # TODO: get current yaw 
+            q_err = q_tgt*conj(q_eb)
+
+            # # curr_base_yaw, curr_base_roll, curr_base_pitch = quat_to_euler(q_eb)
+            # debug_point.x = curr_base_yaw
+            # debug_point.y = curr_base_roll
+            # debug_point.z = curr_base_pitch
+            # publish(debug_pub, debug_point)
 
 
-            current_w = fbk_state.imu.gyroscope
-
+            w_b = fbk_state.imu.gyroscope
+            w_e = q_eb*w_b
             # println("current_w")
             # println(current_w)
 
-            Kp_w_val = 0
-            Kd_w_val = 0
-            Kp = diagm([Kp_w_val;Kp_w_val;Kp_w_val])
-            Kd = diagm([Kd_w_val;Kd_w_val;Kd_w_val])
-            Inertia = diagm([0.17;0.13;0.17])
+            Kp = diagm([120;220;80])
+            Kd = diagm([5;25;10])
+            Inertia = diagm([0.1;0.1;0.1])
+            Ie = q_eb*Inertia*conj(q_eb)
             q_err_log = log(q_err)
             q_err_vec = @SVector[q_err_log.x,q_err_log.y,q_err_log.z]
-            e_w = Kp*q_err_vec - Kd*current_w
-            obj = Inertia*e_w
-            # @printf("%6.4f \t %6.4f \t %6.4f \n", obj[1],obj[2],obj[3])
+            e_w = Kp*q_err_vec + Kd*(-w_e)
+            tgt_wa = Ie*e_w
+            # @printf("%6.4f \t %6.4f \t %6.4f \n", tgt_wa[1],tgt_wa[2],tgt_wa[3])
+            debug_point2.x = tgt_wa[1]
+            debug_point2.y = tgt_wa[2]
+            debug_point2.z = tgt_wa[3]
+            publish(debug_pub2, debug_point2)
 
-            println(ref_base_position)
-            println(curr_base_pos)
+            # println(ref_base_position)
+            # println(p_eb)
 
             # construct QP
-            Kp_a_val = 10
-            Kd_a_val = 1
-            Kp_a = diagm([Kp_a_val;Kp_a_val;Kp_a_val])
-            Kd_a = diagm([Kd_a_val;Kd_a_val;Kd_a_val])
+            Kp_a_val = 16.8
+            Kd_a_val = 5.7
+            Kp_a = diagm([100;100;20])
+            Kd_a = diagm([45;45;10])
             ref_body_vel = [0;0;standup_down_z_vel]
-            tgt_a = Kp_a*(ref_base_position-curr_base_pos)+Kd_a*(-curr_base_vel)
+            tgt_a = Kp_a*(ref_base_position-p_eb)+Kd_a*(ref_body_vel-v_eb)
             # println(tgt_a)
             ma = mass*tgt_a
-            b = vcat(mg+ma,obj)
+            b = vcat(ma+mg,tgt_wa)
+
             pR_list = []
             # println(A1Robot.fbk_state.motorState)
-            show(stdout, "text/plain", q_list)
+            # show(stdout, "text/plain", q_list)
             for i=1:4
                 leg_ID = i - 1
                 
                 p = A1Robot.fk(leg_ID, q_list[:,i])
+                p = convert(SVector{3},p)
                 # println("p")
                 # println(p)
-                pR = skew(convert(SVector{3},p))*conj(curr_base_quat) # this q convert force to body frame
+                pR = skew(q_eb*p) # this q convert distance to world franme
                 push!(pR_list, pR)
             end
 
@@ -368,6 +390,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
                 # end
             end
             A = vcat(Imtx,pRmtx)  # always 6x12
+            # println(A)
 
             # D confines the foot force
             D = sparse(I(12))
@@ -385,26 +408,38 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list)
             # Cx<=0
             # Dx = 0
 
+            # print(b)
             P = A'*S*A + alpha_mtx + beta_mtx
+            # print(P)
             q = -(A'*S*b + 2*beta_mtx*F_prev)
+            # print(q)
             model = OSQP.Model()
             OSQP.setup!(model, P=sparse(P), q=Vector(q), A=sparse([D; C]), l=[ld; fill(-Inf,20)], u=[ud; zeros(20)],
                 eps_abs=1e-6, eps_rel=1e-6, verbose=false)
             res = OSQP.solve!(model)
 
             F = reshape(res.x,3,4)
-            show(stdout, "text/plain", F)
-            println("---")
+            
+            # show(stdout, "text/plain", F)
+            # println("---")
 
+            debug_point.x = F[3,1]
+            debug_point.y = F[3,2]
+            debug_point.z = F[3,3]
+            debug_point.w = F[3,4]
+
+            publish(debug_pub, debug_point)
+            # debug_point2.x =0.0
+            # debug_point2.y = F[3,4]
+            # debug_point2.z = 0.0
+            # publish(debug_pub2, debug_point2)
 
             # show(stdout, "text/plain", ref_p_list)
             F_prev = res.x
 
             for i=1:4
                 leg_ID = i-1
-                foot_F = conj(curr_base_quat)*(-normal_load) # foot push into ground
-                p = A1Robot.fk(leg_ID, q_list[:,i])
-                foot_tau = p × foot_F
+                foot_F = conj(q_eb)*(-F[:,i]) # foot push into ground
                 # foot_tau = zeros(3)
                 # println(vcat(foot_tau,foot_F))
                 # show(stdout, "text/plain", F)

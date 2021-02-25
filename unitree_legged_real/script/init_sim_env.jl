@@ -7,11 +7,13 @@ using OSQP
 using SparseArrays
 
 using RobotOS
+# @rosimport std_msgs.msg: Float64
 @rosimport sensor_msgs.msg: Imu, Joy
 @rosimport nav_msgs.msg: Odometry
-@rosimport geometry_msgs.msg: Pose, Twist, QuaternionStamped, WrenchStamped
+@rosimport geometry_msgs.msg: Point, Quaternion, Pose, Twist, QuaternionStamped, WrenchStamped
 @rosimport unitree_legged_msgs.msg: MotorCmd, MotorState, LowState
 rostypegen()
+# using .std_msgs.msg
 using .sensor_msgs.msg
 using .nav_msgs.msg
 using .geometry_msgs.msg

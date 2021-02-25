@@ -111,7 +111,7 @@ end
 function get_tilt_quat(q::UnitQuaternion{Float64})
     ref_vec = @SVector [0.0,0.0,1.0]
     body_vec = q[:,3]
-    rotate_axis = cross(ref_vec, body_vec)
+    rotate_axis = normalize(cross(ref_vec, body_vec))
     rotate_ang = angle_between_vector(ref_vec, body_vec)
 
     q_tilt = axis_angle_to_quat(rotate_ang, rotate_axis)
@@ -119,7 +119,7 @@ function get_tilt_quat(q::UnitQuaternion{Float64})
 end
 
 function get_error_quat(q_cur::UnitQuaternion{Float64}, q_tgt::UnitQuaternion{Float64})
-    q_err = conj(q_cur)*q_tgt
+    q_err = q_tgt*conj(q_cur)
 end
 
 function quat_decompose_tilt_torsion(q::UnitQuaternion{Float64})
