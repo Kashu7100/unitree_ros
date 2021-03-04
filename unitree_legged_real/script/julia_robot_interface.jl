@@ -477,12 +477,12 @@ module A1Robot
   # input feedback joint angle, joint angular velocity
   # input desired foot force (in body frame)
   # output desired leg joint torque
-  function torque_ctrl(leg_ID::Int, 
+  function swing_torque_ctrl(leg_ID::Int, 
       ref_p::Vector{Float64}, ref_v::Vector{Float64}, ref_a::Vector{Float64},
       q::Vector{Float64}, dq::Vector{Float64}, F::Vector{Float64})::Vector{Float64}
       
       Jb = J(leg_ID, q)
-      dJ = dJ(leg_ID, q, dq)
+      dJb = dJ(leg_ID, q, dq)
       p = fk(leg_ID,q)
       v = Jb*dq
       M = getMassMtx(leg_ID,q)
@@ -492,7 +492,7 @@ module A1Robot
       Kp = diagm([90;90;90])
       Kd = diagm([15;15;15])
 
-      tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + Jb'*inv(Jb)'*M*inv(Jb)*(ref_a-dJ*dq) + c + grav;
+      tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + Jb'*inv(Jb)'*M*inv(Jb)*(ref_a-dJb*dq) + c + grav;
       # add the foot force 
       tau = tau + Jb'*F
       return tau
@@ -505,52 +505,4 @@ module A1Robot
       return tau
   end
 
-  # # put data structure in the module
-  # fbk_state = LowState()
-  # joy_data_axes = zeros(Float32,8)
-  # joy_data_buttons = zeros(Int16,11)
-  # body_position = zeros(3)
-  # body_orientation = zeros(4)
-  # body_velocity  = zeros(3) 
-  
-
-  # function init_fbk()
-  #   fbk_state = LowState()
-  #   joy_data_axes = zeros(Float32,8)
-  #   joy_data_buttons = zeros(Int16,11)
-  #   body_position = zeros(3)
-  #   body_orientation = zeros(4)
-  #   body_velocity  = zeros(3) 
-  #   for i=1:4
-  #     fbk_state.footForce[i] = 0
-  #   end
-  #   for i=1:12
-  #       fbk_state.motorState[i].q = 0.01
-  #       fbk_state.motorState[i].dq = 0.0
-  #   end
-  #   body_orientation[1] = 1
-  # end
-
 end # end of the module
-
-
-""" test cases for kinematics and dynamics """
-
-
-
-# @show doc()
-# doc()
-# b = RobotInterface()
-# must intialize the robot 
-# InitSend(b)
-# fbk_state = LowState()
-# @show d = ReceiveObservation(b)
-# c = IMU()
-
-# while true
-#     sleep(0.01)
-#     getFbkState(b, fbk_state)
-
-#     # now fbk_state are filled with most of the sensor data from the robot
-#     @show fbk_state.imu.rpy
-# end

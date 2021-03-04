@@ -18,3 +18,7 @@ using .sensor_msgs.msg
 using .nav_msgs.msg
 using .geometry_msgs.msg
 using .unitree_legged_msgs.msg
+
+#just call functions in A1Robot, do not instantiate robot interface
+
+using Dates # this is for get time to control gait, but may need to use ros time later
