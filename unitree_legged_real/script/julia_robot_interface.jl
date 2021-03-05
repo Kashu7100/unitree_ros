@@ -12,6 +12,7 @@ module A1Robot
   using StaticArrays
   using LinearAlgebra
   using ModernRoboticsBook
+  using ForwardDiff
   # using RobotOS
   
   # @rosimport sensor_msgs.msg: Imu, Joy
@@ -240,7 +241,7 @@ module A1Robot
   # get the fk of the leg 
   # idx is the index of the leg (we use 0-3)
   # q is the value of joint angles
-  function fk(idx::Int, q::Array{Float64,1})
+  function fk(idx::Int, q)
     # these two variables indicates the quadrant of the leg
     front_hind = 1
     mirror = -1
@@ -479,7 +480,8 @@ module A1Robot
   # output desired leg joint torque
   function swing_torque_ctrl(leg_ID::Int, 
       ref_p::Vector{Float64}, ref_v::Vector{Float64}, ref_a::Vector{Float64},
-      q::Vector{Float64}, dq::Vector{Float64}, F::Vector{Float64})::Vector{Float64}
+      q::Vector{Float64}, dq::Vector{Float64}, F::Vector{Float64},
+      Kp::Array{Float64,2},Kd::Array{Float64,2})::Vector{Float64}
       
       Jb = J(leg_ID, q)
       dJb = dJ(leg_ID, q, dq)
@@ -489,12 +491,12 @@ module A1Robot
       c = getVelQuadraticForces(leg_ID,q,dq)
       grav = getGravityForces(leg_ID,q)
 
-      Kp = diagm([90;90;90])
-      Kd = diagm([15;15;15])
 
-      tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + Jb'*inv(Jb)'*M*inv(Jb)*(ref_a-dJb*dq) + c + grav;
-      # add the foot force 
-      tau = tau + Jb'*F
+
+      tau = Jb'*(Kp*(ref_p-p)+Kd*(Kp/2*(ref_p-p)+ref_v-v)) + Jb'*inv(Jb)'*M*inv(Jb)*(ref_a-dJb*dq) + c + grav;
+
+      # tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + c + grav;
+
       return tau
   end
 
