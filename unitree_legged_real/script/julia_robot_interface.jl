@@ -343,7 +343,7 @@ module A1Robot
   # get twist list (Slist), home configuration list (Mlist), inertia list (Glist)
   # these definitions are from "ModernRobotics"
 
-  function getTwistList(idx::Integer)
+  function getSpatialTwistList(idx::Integer)
     # these two variables indicates the quadrant of the leg
     front_hind = 1
     mirror = -1
@@ -376,6 +376,41 @@ module A1Robot
           leg_offset_y*mirror + thigh_offset*mirror;
           -2*thigh_length];
     Slist = [[w1;-cross(w1,pq1)] [w2;-cross(w2,pq2)] [w3;-cross(w3,pq3)]];
+  end
+
+  function getBodyTwistList(idx::Integer)
+    # these two variables indicates the quadrant of the leg
+    front_hind = 1
+    mirror = -1
+    if idx == C_FR_
+      front_hind = 1
+      mirror = -1
+    elseif idx == C_FL_
+      front_hind = 1
+      mirror = 1
+    elseif idx == C_RR_
+      front_hind = -1
+      mirror = -1
+    else
+      front_hind = -1
+      mirror = 1
+    end
+    w1 = [1;0;0];
+    pq1 = [0;
+           -leg_offset_y*mirror;
+           2*thigh_length];
+    w2 = [0;1;0];
+    pq2 = [0.0;
+           0.0;
+           2*thigh_length];
+    w3 = [0;1;0];
+    pq3 = [0.0;
+           0.0;
+           thigh_length];
+    pf = [0.0;
+          0.0;
+          0.0];
+    Blist = [[w1;-cross(w1,pq1)] [w2;-cross(w2,pq2)] [w3;-cross(w3,pq3)]];
   end
 
   function getMList(idx::Integer)
@@ -447,27 +482,32 @@ module A1Robot
 
   # this function calls ModernRoboticsBook
   function getSpatialJ(idx::Integer, q::Array{Float64,1})
-    SList = getTwistList(idx)
+    SList = getSpatialTwistList(idx)
     return ModernRoboticsBook.JacobianSpace(SList, q)
+  end
+
+  function getBodyJ(idx::Integer, q::Array{Float64,1})
+    BList = getBodyTwistList(idx)
+    return ModernRoboticsBook.JacobianBody(BList, q)
   end
 
   function getMassMtx(idx::Integer, q::Array{Float64,1})
     MList = getMList(idx)
-    SList = getTwistList(idx)
+    SList = getSpatialTwistList(idx)
     GList = getGList()
     return ModernRoboticsBook.MassMatrix(q, MList, GList, SList)
   end
 
   function getVelQuadraticForces(idx::Integer, q::Array{Float64,1}, dq::Array{Float64,1})
     MList = getMList(idx)
-    SList = getTwistList(idx)
+    SList = getSpatialTwistList(idx)
     GList = getGList()
     return ModernRoboticsBook.VelQuadraticForces(q, dq, MList, GList, SList)
   end
 
   function getGravityForces(idx::Integer, q::Array{Float64,1})
     MList = getMList(idx)
-    SList = getTwistList(idx)
+    SList = getSpatialTwistList(idx)
     GList = getGList()
     return ModernRoboticsBook.GravityForces(q, [0; 0; -9.8], MList, GList, SList)
   end
