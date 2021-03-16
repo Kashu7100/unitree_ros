@@ -97,29 +97,29 @@ function main(ctrl_mode::Integer)
     """ send sim data data and pub"""
     simcmd_list = [unitree_legged_msgs.msg.MotorCmd() for i=1:12]
     sim_pub_list  = []
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_hip_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_hip_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_thigh_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_thigh_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_calf_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FR_calf_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_hip_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_hip_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_thigh_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_thigh_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_calf_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/FL_calf_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_hip_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_hip_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_thigh_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_thigh_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_calf_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RR_calf_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_hip_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_hip_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_thigh_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_thigh_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
-    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_calf_controller/command", queue_size=1)
+    pub = Publisher{unitree_legged_msgs.msg.MotorCmd}("a1_gazebo/RL_calf_controller/command", queue_size=10)
     push!(sim_pub_list,pub)
     
     """ start control loop """
@@ -157,7 +157,7 @@ end
 
 
 function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_mode)
-    ctrl_hz = 500.0
+    ctrl_hz = 100.0
     ctrl_dt = 1.0/ctrl_hz
     loop_rate = Rate(ctrl_hz)   
     
@@ -194,18 +194,29 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
             dq_list[j,i] = convert(Float64, fbk_state.motorState[leg_ID*3+j].dq)
         end
     end  
+    init_foot_pos_b = zeros(3,4)
     nominal_foot_pos_b = zeros(3,4)
     nominal_foot_pos_e = zeros(3,4)
     ref_foot_pos_e = zeros(3,4)
     for i=1:4
         leg_ID = i-1
-        nominal_foot_pos_b[:,i] = A1Robot.fk(leg_ID, q_list[:,i])
+        init_foot_pos_b[:,i] = A1Robot.fk(leg_ID, q_list[:,i])
+        nominal_foot_pos_b[:,i] = A1Robot.fk(leg_ID, [0.0;0.6;-1.3])
         nominal_foot_pos_e[:,i] = ref_base_position + q_eb*nominal_foot_pos_b[:,i]
     end
     show(stdout, "text/plain", q_list)
     println(" ")
-    show(stdout, "text/plain", nominal_foot_pos_e)
+    show(stdout, "text/plain", init_foot_pos_b)
+    show(stdout, "text/plain", nominal_foot_pos_b)
     ref_foot_pos_e = nominal_foot_pos_e 
+    # create a test trajectory for control_state = 2
+
+    # init_p = nominal_foot_pos_b[:,1]
+    # tgt_p = init_p + [0.13;0;0]
+    # mid_p = (tgt_p+init_p)/2+[0;-0.08;0.11]
+    # ref_p_list = [init_p mid_p tgt_p init_p]
+    # gait_circle= 1
+    # ref_t_list = [0.0,gait_circle*0.3,gait_circle*0.6,gait_circle]
             
     standup_down_z_vel = 0;
     control_state = ctrl_mode      # 0 is standing, joy control orientation
@@ -221,7 +232,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
     foot_contact_schedule = [1,1,1,1] # this is plan
     foot_contact_fbk = [1,1,1,1] # this is plan
     gait_time = 0.0
-    gait_total_time = 0.45 # this is a parameter controls the length of each gait
+    gait_total_time = 0.5 # this is a parameter controls the length of each gait
     start_t = get_rostime()
     current_t = get_rostime()
     FR_gait_phase = [0,0.4]      # lift leg time: first number*gait_total_time, touch down leg time: second number*gait_total_time
@@ -237,9 +248,20 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
     swing_tgt_foot_pos = zeros(3,4)
     swing_tgt_foot_pos_e = nominal_foot_pos_e
     swing_traj_time = zeros(3,4)
+
+    #  task space
+    # Kp_swing = diagm([3400.0;3200.0;2600.0])
+    # Ki_swing = diagm([88.0;88.0;88.0])
+    # Kd_swing = diagm([550.0;200.0;500.0])
+    #joint space
+    Kp_swing = diagm([9000.0;9000.0;9000.0])
+    Ki_swing = diagm([1700.0;1700.0;1700.0])
+    Kd_swing = diagm([10.0;10.0;10.0])
+
     # variables for swing and stance leg torque
     tau_swing = zeros(3,4)
     tau_stance = zeros(3,4)
+    tau = zeros(3,4)
     error_pos_foot = zeros(3,4)
 
     mass = 12.5
@@ -568,9 +590,9 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     foot_contact_fbk[i] = 0
                 end
                 # early contact
-                # if gait_time > leg_gait_phase[i][1]*gait_total_time+0.05 && gait_time < leg_gait_phase[i][2]*gait_total_time && foot_contact_fbk[i] == 1
-                #     foot_contact[i] =  foot_contact_fbk[i]  
-                # end 
+                if gait_time > (leg_gait_phase[i][1]+leg_gait_phase[i][2])/2*gait_total_time && gait_time < leg_gait_phase[i][2]*gait_total_time && foot_contact_fbk[i] == 1
+                    foot_contact[i] =  foot_contact_fbk[i]  
+                end 
             end
             # debug_point.x = foot_contact[1]
             # debug_point.y = foot_contact_schedule[1]
@@ -594,10 +616,11 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     contact_time = abs(leg_gait_phase[i][1]*gait_total_time) +  (1- leg_gait_phase[i][2])*gait_total_time
                     p_tgt_e = SA[pe[1],pe[2],nominal_foot_pos_e[3,i]] # use initial foot height
                     p_tgt_e += contact_time/2*ref_body_vel # raibert heuristic
-                    p_tgt_e += sqrt(0.33/9.81)*(v_eb-ref_body_vel) # capture point
+                    # p_tgt_e += sqrt(0.33/9.81)*(v_eb-ref_body_vel) # capture point
                     swing_tgt_foot_pos_e[:,i] = p_tgt_e
                     p_tgt_b = conj(q_eb)*(p_tgt_e - p_eb)
-                    swing_tgt_foot_pos[:,i] = p_tgt_b
+                    # swing_tgt_foot_pos[:,i] = p_tgt_b
+                    swing_tgt_foot_pos[:,i] = nominal_foot_pos_b[:,i]
                     swing_mid_foot_pos[:,i] = (swing_cur_foot_pos[:,i]+swing_tgt_foot_pos[:,i])/2 + conj(q_eb)*[0.0;0.0;0.05]
                     swing_traj_time[1,i] = leg_gait_phase[i][1]*gait_total_time 
                     swing_traj_time[3,i] = leg_gait_phase[i][2]*gait_total_time 
@@ -657,11 +680,17 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
             tgt_wa = Ie*e_w
 
             # construct QP
-            Kp_a = diagm([50;50;50])
-            Kd_a = diagm([10;10;10])
+            Kp_a = diagm([30;30;30])
+            Kd_a = diagm([6;6;6])
             tgt_a = Kp_a*(ref_base_position-p_eb)+Kd_a*(ref_body_vel-v_eb)
             ma = mass*tgt_a
             b = vcat(ma+mg,tgt_wa)
+
+            debug_point.x = q_err_vec[1]
+            debug_point.y = p_eb[1]
+            debug_point.z = q_err_vec[2]
+            debug_point.w = p_eb[2]
+
 
             pR_list = []
             for i=1:4
@@ -719,41 +748,48 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
             F_prev = res.x
 
             # 2. control swing trajectory       
-            Kp = diagm([20.0;20.0;20.0])
-            Kd = diagm([5.0;5.0;5.0])
-            # Kp = diagm([30.0; 10.0; 150.0])
-            # Kd = diagm([100.0; 0.0; 210.0])  
 
             for i=1:4
                 leg_ID = i-1
-                tau = zeros(3)
-                if foot_contact[i] == 0
+                if foot_contact[i] == 0 
                     # we assume if foot contact is 0 there is a generated trajectory
                     ref_p_list = [swing_cur_foot_pos[:,i] swing_mid_foot_pos[:,i] swing_tgt_foot_pos[:,i]]
                     ref_t_list = swing_traj_time[:,i]
                     ref_p, ref_v, ref_a = hermite_cubic_traj(ref_p_list, ref_t_list, gait_time)
-                    tau_swing[:,i] = A1Robot.swing_torque_ctrl(leg_ID,ref_p,ref_v,ref_a,q_list[:,i],dq_list[:,i],zeros(3),Kp,Kd)
-                    tau = tau_swing[:,i]
+
+                    icap = 700
+                    # pb = A1Robot.fk(leg_ID,q_list[:,i])
+                    ref_q = A1Robot.ik(leg_ID, ref_p, q_list[:,i])
+
+                    error_pos_foot[:,i] += (ref_q-q_list[:,i])*ctrl_dt 
+                    error_pos_foot = max.(min.(error_pos_foot,icap),-icap)
+                    error_pos_foot .*= 0.8
+                    tau_swing[:,i] = A1Robot.swing_torque_gazebo_joint(leg_ID,ref_q,ref_v,ref_a,q_list[:,i],dq_list[:,i],error_pos_foot[:,i], Kp_swing,Ki_swing,Kd_swing)
+
+                    # error_pos_foot[:,i] += (ref_p-pb)*ctrl_dt 
+                    # error_pos_foot = max.(min.(error_pos_foot,icap),-icap)
+                    # error_pos_foot .*= 0.8
+                    # tau_swing[:,i] = A1Robot.swing_torque_gazebo(leg_ID,ref_p,ref_v,ref_a,q_list[:,i],dq_list[:,i],error_pos_foot[:,i], Kp_swing,Ki_swing,Kd_swing)
+                    tau[:,i] = tau_swing[:,i]
                     # debug tracking performance
-                    pb = A1Robot.fk(leg_ID,q_list[:,i])
-                    Jb = A1Robot.J(leg_ID, q_list[:,i])
-                    v = Jb*dq_list[:,i]
-                    if i == 1
-                        # debug_point.x = norm(ref_p[1])
-                        # debug_point.y = norm(pb[1])
-                        # debug_point.z = norm(ref_v[1])
-                        # debug_point.w = norm(v[1])
+                    # Jb = A1Robot.J(leg_ID, q_list[:,i])
+                    # v = Jb*dq_list[:,i]
+                    # if i == 1
+                    #     debug_point.x = ref_q[1]
+                    #     debug_point.y = q_list[1,i]
+                    #     debug_point.z = ref_q[2]
+                    #     debug_point.w = q_list[2,i]
 
 
-                        # debug_point2.x = norm(ref_p[3])
-                        # debug_point2.y = norm(pb[3])
-                        # debug_point2.z = norm(ref_v[3])
-                        # debug_point2.w = norm(v[3])
-                    end
+                    #     debug_point2.x = ref_q[3]
+                    #     debug_point2.y = q_list[3,i]
+                    #     debug_point2.z = tau_swing[1,i]
+                    #     # debug_point2.w = norm(v[3])
+                    # end
                 else
                     foot_F = conj(q_eb)*(-F[:,i]) # foot push into ground
                     tau_stance[:,i] = A1Robot.stance_torque_ctrl(leg_ID, q_list[:,i], Array(foot_F))
-                    tau = tau_stance[:,i]
+                    tau[:,i] = tau_stance[:,i]
                     # foot_F = zeros(3) # foot push into ground
                     # ref_p = nominal_foot_pos[:,i]
                     # ref_v = zeros(3) 
@@ -767,9 +803,11 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     # end
                 end
                 
-                sim_setCmdMotorTau(leg_ID*3, Float32(tau[1]),simcmd_list)
-                sim_setCmdMotorTau(leg_ID*3+1, Float32(tau[2]),simcmd_list)
-                sim_setCmdMotorTau(leg_ID*3+2, Float32(tau[3]),simcmd_list)
+                # if i==1
+                sim_setCmdMotorTau(leg_ID*3, Float32(tau[1,i]),simcmd_list)
+                sim_setCmdMotorTau(leg_ID*3+1, Float32(tau[2,i]),simcmd_list)
+                sim_setCmdMotorTau(leg_ID*3+2, Float32(tau[3,i]),simcmd_list)
+                # end
             end
             sim_SendCommand(simcmd_list, sim_pub_list)
 
@@ -803,10 +841,21 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
             i = 1
             leg_ID = 0  # just control one leg
             tau = zeros(3)
-            ref_p = Array(conj(q_eb)*(ref_foot_pos_e[:,i] - p_eb))
-            ref_v = zeros(3)
-            ref_a = zeros(3)
 
+
+            current_t = get_rostime()
+            dt = current_t - start_t
+            gait_time = to_sec(dt)
+            if gait_time >= gait_circle
+                start_t = get_rostime()
+            end
+
+            # ref_p = Array(conj(q_eb)*(ref_foot_pos_e[:,i] - p_eb))
+            # ref_v = zeros(3)
+            # ref_a = zeros(3)
+            # println(gait_time)
+            ref_p, ref_v, ref_a = hermite_cubic_traj(ref_p_list, ref_t_list, gait_time)
+        
 
             pb = A1Robot.fk(leg_ID,q_list[:,i])
 
@@ -820,31 +869,35 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
             debug_point2.z = pb[3]
             debug_point2.w = 0.0
 
-
-            Kp = diagm([1700.0;1700.0;1700.0])
-            Ki = diagm([38.0;38.0;38.0])
             icap = 60
-            Kd = diagm([8.0;8.0;8.0])
-            q = q_list[:,i]
-            dq = dq_list[:,i]
-            # tau = A1Robot.swing_torque_ctrl(leg_ID,ref_p,ref_v,ref_a,q_list[:,i],dq_list[:,i],zeros(3),Kp,Kd)
-            # task space 
-            Jb = A1Robot.J(leg_ID, q)
-            Jinv = inv(Jb)
-            dJb = A1Robot.dJ(leg_ID, q, dq)
-            v = Jb*dq
-            M = A1Robot.getMassMtx(leg_ID,q)
-            h = A1Robot.getVelQuadraticForces(leg_ID,q,dq) + A1Robot.getGravityForces(leg_ID,q)
-            
-            # modern robotics 8.90, 8.91
-            Lambda = Jinv'*M*Jinv
-            eta = Jinv'*h - Lambda*dJb*dq
-            # modern robotics 11.47
             error_pos_foot[:,i] += (ref_p-pb)*ctrl_dt # TODO:anti-windup
 
             error_pos_foot = max.(min.(error_pos_foot,icap),-icap)
+            tau = A1Robot.swing_torque_gazebo(leg_ID,ref_p,ref_v,ref_a,q_list[:,i],dq_list[:,i],error_pos_foot[:,i])
+            # Kp = diagm([2200.0;2200.0;2200.0])
+            # Ki = diagm([88.0;88.0;88.0])
+            # icap = 60
+            # Kd = diagm([500.0;500.0;500.0])
+            # q = q_list[:,i]
+            # dq = dq_list[:,i]
+            # # tau = A1Robot.swing_torque_ctrl(leg_ID,ref_p,ref_v,ref_a,q_list[:,i],dq_list[:,i],zeros(3),Kp,Kd)
+            # # task space 
+            # Jb = A1Robot.J(leg_ID, q)
+            # Jinv = inv(Jb)
+            # dJb = A1Robot.dJ(leg_ID, q, dq)
+            # v = Jb*dq
+            # M = A1Robot.getMassMtx(leg_ID,q)
+            # h = A1Robot.getVelQuadraticForces(leg_ID,q,dq) + A1Robot.getGravityForces(leg_ID,q)
             
-            tau = Jb'*(Lambda*(ref_a + Kp*(ref_p-pb)+ Ki*error_pos_foot[:,i] +Kd *(ref_v-v) ) + eta ) 
+            # # modern robotics 8.90, 8.91
+            # Lambda = Jinv'*M*Jinv
+            # eta = Jinv'*h - Lambda*dJb*dq
+            # # modern robotics 11.47
+            # error_pos_foot[:,i] += (ref_p-pb)*ctrl_dt # TODO:anti-windup
+
+            # error_pos_foot = max.(min.(error_pos_foot,icap),-icap)
+            
+            # tau = Jb'*(Lambda*(ref_a + Kp*(ref_p-pb)+ Ki*error_pos_foot[:,i] +Kd *(ref_v-v) ) + eta ) 
 
             
             sim_setCmdMotorTau(leg_ID*3, Float32(tau[1]),simcmd_list)

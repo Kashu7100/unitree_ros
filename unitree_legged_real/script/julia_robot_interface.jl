@@ -176,10 +176,42 @@ module A1Robot
   const RL_1 = 11;
   const RL_2 = 12;
 
+  MList4 = Array{Array{Array{Float64,2},1},1}()
+  SList4 = Array{Array{Float64,2},1}()
+  GList  = Array{Array{Float64,2},1}()
+
   @wrapmodule("/home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib/libjulia_a1_interface.so")
 
   function __init__()
     @initcxx
+
+    # init lists
+    for i=1:4
+      push!(MList4, getMList(i-1))
+      push!(SList4, getSpatialTwistList(i-1))
+    end
+    I1 = [hip_ixx        hip_ixy        hip_ixz;
+      hip_ixy        hip_iyy        hip_iyz;
+      hip_ixz        hip_iyz        hip_izz ];
+        
+    G1 = [I1 zeros(3,3);
+      zeros(3,3) diagm([hip_mass, hip_mass, hip_mass])];
+    push!(GList,G1)
+
+    I2 = [thigh_ixx    thigh_ixy      thigh_ixx;
+      thigh_ixy    thigh_iyy      thigh_iyz;
+      thigh_ixz    thigh_iyz      thigh_izz ];
+    G2 = [I2 zeros(3,3);
+      zeros(3,3) diagm([thigh_mass, thigh_mass, thigh_mass])];
+    push!(GList,G2)
+
+    I3 = [calf_ixx    calf_ixy      calf_ixx;
+      calf_ixy    calf_iyy      calf_iyz;
+      calf_ixz    calf_iyz      calf_izz ];
+    G3 = [I3 zeros(3,3);
+      zeros(3,3) diagm([calf_mass, calf_mass, calf_mass])];
+    push!(GList,G3)
+    
   end
   
   function getFbkState!(itf::RobotInterface, fbk_state::LowState)
@@ -260,7 +292,7 @@ module A1Robot
     end
     l = thigh_length
     q1=q[1]; q2=q[2]; q3=q[3];
-    p = zeros(3)
+    p = zeros(eltype(q),3)
     p[1] = leg_offset_x*front_hind - l*sin(q2 + q3) - l*sin(q2)
 
     p[2] = sin(q1)*(l*cos(q2 + q3) + l*cos(q2)) + thigh_offset*mirror*cos(q1) +leg_offset_y*mirror
@@ -302,6 +334,15 @@ module A1Robot
     J[3,2] = l*cos(q1)*(sin(q2 + q3) + sin(q2))
     J[3,3] = l*sin(q2 + q3)*cos(q1)
     return J
+  end
+
+  function ik(idx::Int, xd::Array{Float64,1}, q0::Array{Float64,1})
+    error = xd-fk(idx,q0)
+    while norm(error) > 1e-6
+      q0 += pinv(J(idx,q0))*error
+      error = xd-fk(idx,q0)
+    end
+    return q0
   end
 
   # the derivative of the leg jacobian. 
@@ -482,8 +523,8 @@ module A1Robot
 
   # this function calls ModernRoboticsBook
   function getSpatialJ(idx::Integer, q::Array{Float64,1})
-    SList = getSpatialTwistList(idx)
-    return ModernRoboticsBook.JacobianSpace(SList, q)
+    # SList = getSpatialTwistList(idx)
+    return ModernRoboticsBook.JacobianSpace(SList4[idx+1], q)
   end
 
   function getBodyJ(idx::Integer, q::Array{Float64,1})
@@ -492,24 +533,24 @@ module A1Robot
   end
 
   function getMassMtx(idx::Integer, q::Array{Float64,1})
-    MList = getMList(idx)
-    SList = getSpatialTwistList(idx)
-    GList = getGList()
-    return ModernRoboticsBook.MassMatrix(q, MList, GList, SList)
+    # MList = getMList(idx)
+    # SList = getSpatialTwistList(idx)
+    # GList = getGList()
+    return ModernRoboticsBook.MassMatrix(q, MList4[idx+1], GList, SList4[idx+1])
   end
 
   function getVelQuadraticForces(idx::Integer, q::Array{Float64,1}, dq::Array{Float64,1})
-    MList = getMList(idx)
-    SList = getSpatialTwistList(idx)
-    GList = getGList()
-    return ModernRoboticsBook.VelQuadraticForces(q, dq, MList, GList, SList)
+    # MList = getMList(idx)
+    # SList = getSpatialTwistList(idx)
+    # GList = getGList()
+    return ModernRoboticsBook.VelQuadraticForces(q, dq, MList4[idx+1], GList, SList4[idx+1])
   end
 
   function getGravityForces(idx::Integer, q::Array{Float64,1})
-    MList = getMList(idx)
-    SList = getSpatialTwistList(idx)
-    GList = getGList()
-    return ModernRoboticsBook.GravityForces(q, [0; 0; -9.8], MList, GList, SList)
+    # MList = getMList(idx)
+    # SList = getSpatialTwistList(idx)
+    # GList = getGList()
+    return ModernRoboticsBook.GravityForces(q, [0; 0; 9.8], MList4[idx+1], GList, SList4[idx+1])
   end
 
   """ functions to control the robot """
@@ -538,6 +579,57 @@ module A1Robot
       # tau = Jb'*(Kp*(ref_p-p)+Kd*(ref_v-v)) + c + grav;
 
       return tau
+  end
+
+  # this is task space 
+  # parameters in this function is tuned in gazebo
+  function swing_torque_gazebo(leg_ID::Int,
+    ref_p::Vector{Float64}, ref_v::Vector{Float64}, ref_a::Vector{Float64},
+    q::Vector{Float64}, dq::Vector{Float64}, eint::Vector{Float64},
+    Kp::Array{Float64,2},Ki::Array{Float64,2},Kd::Array{Float64,2})
+
+    # task space 
+    Jb = J(leg_ID, q)
+    Jinv = pinv(Jb)
+    dJb = dJ(leg_ID, q, dq)
+    v = Jb*dq
+    M = getMassMtx(leg_ID,q)
+    h = getVelQuadraticForces(leg_ID,q,dq) + getGravityForces(leg_ID,q)
+
+    pb = fk(leg_ID,q)
+    # modern robotics 8.90, 8.91
+    Lambda = Jinv'*M*Jinv
+    eta = Jinv'*h - Lambda*dJb*dq
+    # modern robotics 11.47
+    
+    tau = Jb'*(Lambda*(ref_a + Kp*(ref_p-pb)+ Ki*eint +Kd *(ref_v-v) ) + eta ) 
+
+  end
+  # this is joint space 
+  function swing_torque_gazebo_joint(leg_ID::Int,
+    ref_q::Vector{Float64}, ref_v::Vector{Float64}, ref_a::Vector{Float64},
+    q::Vector{Float64}, dq::Vector{Float64}, eint::Vector{Float64},
+    Kp::Array{Float64,2},Ki::Array{Float64,2},Kd::Array{Float64,2})
+
+    # joint space 
+    # ref_q = ik(leg_ID, ref_p, q)
+    Jb = J(leg_ID, q)
+    ref_dq = pinv(Jb)'*ref_v
+    dJb = dJ(leg_ID, q, dq)
+    ref_ddq = pinv(Jb)'*(ref_a - dJb*dq)
+    # Jinv = pinv(Jb)
+    # v = Jb*dq
+    M = getMassMtx(leg_ID,q)
+    h = getVelQuadraticForces(leg_ID,q,dq) + getGravityForces(leg_ID,q)
+    tau = M*(ref_ddq + Kp*(ref_q-q) + Ki*eint + Kd*(ref_dq-dq)) + h
+    # pb = fk(leg_ID,q)
+    # modern robotics 8.90, 8.91
+    # Lambda = Jinv'*M*Jinv
+    # eta = Jinv'*h - Lambda*dJb*dq
+    # modern robotics 11.47
+    
+    # tau = Jb'*(Lambda*(ref_a + Kp*(ref_p-pb)+ Ki*eint +Kd *(ref_v-v) ) + eta ) 
+
   end
 
   function stance_torque_ctrl(leg_ID::Int, q::Vector{Float64}, F::Vector{Float64})::Vector{Float64}
