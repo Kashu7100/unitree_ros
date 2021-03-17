@@ -232,7 +232,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
     foot_contact_schedule = [1,1,1,1] # this is plan
     foot_contact_fbk = [1,1,1,1] # this is plan
     gait_time = 0.0
-    gait_total_time = 1.0 # this is a parameter controls the length of each gait
+    gait_total_time = 0.66 # this is a parameter controls the length of each gait
     start_t = get_rostime()
     current_t = get_rostime()
     FR_gait_phase = [0.05,0.45]      # lift leg time: first number*gait_total_time, touch down leg time: second number*gait_total_time
@@ -254,9 +254,9 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
     # Ki_swing = diagm([88.0;88.0;88.0])
     # Kd_swing = diagm([550.0;200.0;500.0])
     #joint space
-    Kp_swing = diagm([900.0;900.0;900.0])
-    Ki_swing = diagm([700.0;700.0;700.0])
-    Kd_swing = diagm([10.0;10.0;10.0])
+    Kp_swing = diagm([90.0;90.0;90.0])
+    Ki_swing = diagm([80.0;80.0;80.0])
+    Kd_swing = diagm([15.0;15.0;15.0])
 
     # variables for swing and stance leg torque
     tau_swing = zeros(3,4)
@@ -545,6 +545,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     gait_is_running = 1
                     start_t = get_rostime()
                     gait_time = 0.0
+                    foot_contact = [1,1,1,1]
                 end
             else
                 if gait_time >= gait_total_time
@@ -585,9 +586,9 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                         foot_contact_schedule[i] = 1
                     end
                 end
+                foot_contact = foot_contact_schedule
             end
 
-            foot_contact = foot_contact_schedule
 
             for i=1:4
                 if fbk_state.footForce[i] > 0.0
@@ -596,7 +597,7 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     foot_contact_fbk[i] = 0
                 end
                 # early contact
-                if gait_time > (leg_gait_phase[i][1]+leg_gait_phase[i][2])/2*gait_total_time && gait_time < leg_gait_phase[i][2]*gait_total_time && foot_contact_fbk[i] == 1
+                if gait_time > (leg_gait_phase[i][1]+leg_gait_phase[i][2])/2*gait_total_time && gait_time <= leg_gait_phase[i][2]*gait_total_time && foot_contact_fbk[i] == 1
                     foot_contact[i] =  foot_contact_fbk[i]  
                 end 
             end
@@ -621,13 +622,14 @@ function loop(fbk_state, joy_data, base_state, simcmd_list, sim_pub_list, ctrl_m
                     
                     contact_time = abs(leg_gait_phase[i][1]*gait_total_time) +  (1- leg_gait_phase[i][2])*gait_total_time
                     # p_tgt_e = SA[pe[1],pe[2],nominal_foot_pos_e[3,i]] # use initial foot height
-                    # p_tgt_e += contact_time/2*ref_body_vel # raibert heuristic
-                    # p_tgt_e += sqrt(0.33/9.81)*(v_eb-ref_body_vel) # capture point
+                    p_tgt_e += contact_time/2*ref_body_vel # raibert heuristic
+                    p_tgt_e += sqrt(0.33/9.81)*(v_eb-ref_body_vel) # capture point
                     swing_tgt_foot_pos_e[:,i] = p_tgt_e
                     p_tgt_b = conj(q_eb)*(p_tgt_e - p_eb)
-                    swing_tgt_foot_pos[:,i] = nominal_foot_pos_b[:,i]
+                    # swing_tgt_foot_pos[:,i] = nominal_foot_pos_b[:,i]
+                    swing_tgt_foot_pos[:,i] = p_tgt_b
 
-                    swing_mid_foot_pos[:,i] = (swing_cur_foot_pos[:,i]+swing_tgt_foot_pos[:,i])/2 + [0.0;0.0;0.05]
+                    swing_mid_foot_pos[:,i] = (swing_cur_foot_pos[:,i]+swing_tgt_foot_pos[:,i])/2 + [0.0;0.0;0.15]
                     swing_traj_time[1,i] = leg_gait_phase[i][1]*gait_total_time 
                     swing_traj_time[3,i] = leg_gait_phase[i][2]*gait_total_time 
                     swing_traj_time[2,i] = (swing_traj_time[1,i]+ swing_traj_time[3,i])/2
