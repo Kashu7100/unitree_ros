@@ -18,17 +18,17 @@ float bod_height_ros_min = -0.4;
 
 void joy_callback(const sensor_msgs::Joy::ConstPtr& joy_msg) {
 
-  std::cout << "ha" <<std::endl;
-  bod_height_ros += joy_msg->axes[1]*0.01;
-  if (bod_height_ros >= bod_height_ros_max) {
-    bod_height_ros = bod_height_ros_max;  
-  }
-  if (bod_height_ros <= bod_height_ros_min) {
-    bod_height_ros = bod_height_ros_min;  
-  }
-  roll_ang = joy_msg->axes[3]*30/180.0*M_PI;
-  pitch_ang = joy_msg->axes[4]*30/180.0*M_PI;
-  yaw_ang = joy_msg->axes[0]*30/180.0*M_PI;
+  // std::cout << "ha" <<std::endl;
+  // bod_height_ros += joy_msg->axes[1]*0.01;
+  // if (bod_height_ros >= bod_height_ros_max) {
+  //   bod_height_ros = bod_height_ros_max;  
+  // }
+  // if (bod_height_ros <= bod_height_ros_min) {
+  //   bod_height_ros = bod_height_ros_min;  
+  // }
+  // roll_ang = joy_msg->axes[3]*30/180.0*M_PI;
+  // pitch_ang = joy_msg->axes[4]*30/180.0*M_PI;
+  // yaw_ang = joy_msg->axes[0]*30/180.0*M_PI;
   return;
 }
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         {
             // model_state_pub.pose.position.x = radius * sin(2*M_PI*(double)time_ms/period);
             // model_state_pub.pose.position.y = radius * cos(2*M_PI*(double)time_ms/period);
-            model_state_pub.pose.position.z = 0.5+bod_height_ros;
+            model_state_pub.pose.position.z = 0.325+bod_height_ros;
             // model_state_pub.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, - 2*M_PI*(double)time_ms/period);
             model_state_pub.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll_ang, pitch_ang, yaw_ang);
 
