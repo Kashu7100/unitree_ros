@@ -65,24 +65,24 @@ add_dependencies(lcm_server_3_1 ${${PEOJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXP
 
 
 # add Julia interface
-set(JlCxx_DIR /home/biorobotics/Documents/julia_program_files/libcxxwrap-julia/build)
-set(Julia_PREFIX /home/biorobotics/Documents/julia_program_files/julia-1.5.3) 
-set(Julia_EXECUTABLE /home/biorobotics/Documents/julia_program_files/julia-1.5.3/bin/julia)
-find_package(JlCxx)
-get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
-get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${JlCxx_location}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+# set(JlCxx_DIR /home/biorobotics/Documents/julia_program_files/libcxxwrap-julia/build)
+# set(Julia_PREFIX /home/biorobotics/Documents/julia_program_files/julia-1.5.3) 
+# set(Julia_EXECUTABLE /home/biorobotics/Documents/julia_program_files/julia-1.5.3/bin/julia)
+# find_package(JlCxx)
+# get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
+# get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
+# set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${JlCxx_location}")
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
-message(STATUS "Found JlCxx at ${JlCxx_location}")
+# message(STATUS "Found JlCxx at ${JlCxx_location}")
 
-add_library(julia_a1_interface SHARED src/julia/julia_interface.cpp)
+# add_library(julia_a1_interface SHARED src/julia/julia_interface.cpp)
 
-target_link_libraries(julia_a1_interface JlCxx::cxxwrap_julia ${EXTRA_LIBS})
+# target_link_libraries(julia_a1_interface JlCxx::cxxwrap_julia ${EXTRA_LIBS})
 # this lib file locates in 
 # /home/biorobotics/ros_workspaces/unitree_ws/build/unitree_legged_real/lib
-install(TARGETS
-  julia_a1_interface
-LIBRARY DESTINATION lib
-ARCHIVE DESTINATION lib
-RUNTIME DESTINATION lib)
+# install(TARGETS
+#   julia_a1_interface
+# LIBRARY DESTINATION lib
+# ARCHIVE DESTINATION lib
+# RUNTIME DESTINATION lib)

@@ -12,11 +12,12 @@ add_message_files(
   FILES
   MotorCmd.msg
   MotorState.msg
-  CartesianMsg.msg
+  Cartesian.msg
   IMU.msg
   LED.msg
   LowCmd.msg
   LowState.msg
+  LowStateStamped.msg
   HighCmd.msg
   HighState.msg
   TaskConfig.msg
