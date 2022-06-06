@@ -48,7 +48,7 @@
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <box size="${trunk_length} ${trunk_width} ${trunk_height}"/>
+                <mesh filename="package://a1_description/meshes/trunk.dae" scale="1 1 1"/>
             </geometry>
         </collision>
         <inertial>
