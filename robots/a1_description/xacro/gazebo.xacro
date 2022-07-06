@@ -33,9 +33,6 @@
         </plugin>
     </gazebo>
 
-    <!-- Show the trajectory of trunk center. -->
-
-
     <gazebo>
         <plugin filename="libgazebo_ros_force.so" name="gazebo_ros_force">
             <bodyName>trunk</bodyName>
