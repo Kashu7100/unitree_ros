@@ -6,336 +6,329 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #ifndef _CONVERT_H_
 #define _CONVERT_H_
 
-#include "unitree_legged_sdk/unitree_legged_sdk.h"
 #include <unitree_legged_msgs/LowCmd.h>
 #include <unitree_legged_msgs/LowState.h>
 #include <unitree_legged_msgs/HighCmd.h>
 #include <unitree_legged_msgs/HighState.h>
 #include <unitree_legged_msgs/MotorCmd.h>
 #include <unitree_legged_msgs/MotorState.h>
+#include <unitree_legged_msgs/BmsCmd.h>
+#include <unitree_legged_msgs/BmsState.h>
 #include <unitree_legged_msgs/IMU.h>
-#include "aliengo_sdk/aliengo_sdk.hpp"
+#include "unitree_legged_sdk/unitree_legged_sdk.h"
+#include <ros/ros.h>
+#include <geometry_msgs/Twist.h>
 
-enum firmworkVersion{
-    V3_1,
-    V3_2
-};
-
-unitree_legged_msgs::IMU ToRos(UNITREE_LEGGED_SDK::IMU& lcm)
+UNITREE_LEGGED_SDK::BmsCmd rosMsg2Cmd(const unitree_legged_msgs::BmsCmd &msg)
 {
-    unitree_legged_msgs::IMU ros;
-    ros.quaternion[0] = lcm.quaternion[0];
-    ros.quaternion[1] = lcm.quaternion[1];
-    ros.quaternion[2] = lcm.quaternion[2];
-    ros.quaternion[3] = lcm.quaternion[3];
-    ros.gyroscope[0] = lcm.gyroscope[0];
-    ros.gyroscope[1] = lcm.gyroscope[1];
-    ros.gyroscope[2] = lcm.gyroscope[2];
-    ros.accelerometer[0] = lcm.accelerometer[0];
-    ros.accelerometer[1] = lcm.accelerometer[1];
-    ros.accelerometer[2] = lcm.accelerometer[2];
-    // ros.rpy[0] = lcm.rpy[0];
-    // ros.rpy[1] = lcm.rpy[1];
-    // ros.rpy[2] = lcm.rpy[2];
-    ros.temperature = lcm.temperature;
-    return ros;
+    UNITREE_LEGGED_SDK::BmsCmd cmd;
+
+    cmd.off = msg.off;
+
+    for (int i(0); i < 3; i++)
+    {
+        cmd.reserve[i] = msg.reserve[i];
+    }
+
+    return cmd;
 }
 
-unitree_legged_msgs::IMU ToRos(aliengo::IMU& lcm){
-    unitree_legged_msgs::IMU ros;
-    ros.quaternion[0] = lcm.quaternion[0];
-    ros.quaternion[1] = lcm.quaternion[1];
-    ros.quaternion[2] = lcm.quaternion[2];
-    ros.quaternion[3] = lcm.quaternion[3];
-    ros.gyroscope[0] = lcm.gyroscope[0];
-    ros.gyroscope[1] = lcm.gyroscope[1];
-    ros.gyroscope[2] = lcm.gyroscope[2];
-    ros.accelerometer[0] = lcm.acceleration[0];
-    ros.accelerometer[1] = lcm.acceleration[1];
-    ros.accelerometer[2] = lcm.acceleration[2];
-    // ros.rpy[0] = lcm.rpy[0];
-    // ros.rpy[1] = lcm.rpy[1];
-    // ros.rpy[2] = lcm.rpy[2];
-    ros.temperature = lcm.temp;
-    return ros;
-}
-
-unitree_legged_msgs::MotorState ToRos(UNITREE_LEGGED_SDK::MotorState& lcm)
+UNITREE_LEGGED_SDK::HighCmd rosMsg2Cmd(const unitree_legged_msgs::HighCmd::ConstPtr &msg)
 {
-    unitree_legged_msgs::MotorState ros;
-    ros.mode = lcm.mode;
-    ros.q = lcm.q;
-    ros.dq = lcm.dq;
-    ros.ddq = lcm.ddq;
-    ros.tauEst = lcm.tauEst;
-    ros.q_raw = lcm.q_raw;
-    ros.dq_raw = lcm.dq_raw;
-    ros.ddq_raw = lcm.ddq_raw;
-    ros.temperature = lcm.temperature;
-    ros.reserve[0] = lcm.reserve[0];
-    ros.reserve[1] = lcm.reserve[1];
-    return ros;
+    UNITREE_LEGGED_SDK::HighCmd cmd;
+
+    for (int i(0); i < 2; i++)
+    {
+        cmd.head[i] = msg->head[i];
+        cmd.SN[i] = msg->SN[i];
+        cmd.version[i] = msg->version[i];
+        cmd.position[i] = msg->position[i];
+        cmd.velocity[i] = msg->velocity[i];
+    }
+
+    for (int i(0); i < 3; i++)
+    {
+        cmd.euler[i] = msg->euler[i];
+    }
+
+    for (int i(0); i < 4; i++)
+    {
+        cmd.led[i].r = msg->led[i].r;
+        cmd.led[i].g = msg->led[i].g;
+        cmd.led[i].b = msg->led[i].b;
+    }
+
+    for (int i(0); i < 40; i++)
+    {
+        cmd.wirelessRemote[i] = msg->wirelessRemote[i];
+    }
+
+    cmd.levelFlag = msg->levelFlag;
+    cmd.frameReserve = msg->frameReserve;
+    cmd.bandWidth = msg->bandWidth;
+    cmd.mode = msg->mode;
+    cmd.gaitType = msg->gaitType;
+    cmd.speedLevel = msg->speedLevel;
+    cmd.footRaiseHeight = msg->footRaiseHeight;
+    cmd.bodyHeight = msg->bodyHeight;
+    cmd.yawSpeed = msg->yawSpeed;
+    cmd.reserve = msg->reserve;
+    cmd.crc = msg->crc;
+
+    cmd.bms = rosMsg2Cmd(msg->bms);
+
+    return cmd;
 }
 
-unitree_legged_msgs::MotorState ToRos(aliengo::MotorState& lcm){
-    unitree_legged_msgs::MotorState ros;
-    ros.mode = lcm.mode;
-    ros.q = lcm.position;
-    ros.dq = lcm.velocity;
-    ros.ddq = 0;
-    ros.tauEst = lcm.torque;
-    ros.q_raw = 0;
-    ros.dq_raw = 0;
-    ros.ddq_raw = 0;
-    ros.temperature = lcm.temperature;
-
-// printf("dq: %f\n", lcm.velocity);
-
-    return ros;
-}
-
-UNITREE_LEGGED_SDK::MotorCmd ToLcm(unitree_legged_msgs::MotorCmd& ros, UNITREE_LEGGED_SDK::MotorCmd lcmType)
+UNITREE_LEGGED_SDK::MotorCmd rosMsg2Cmd(const unitree_legged_msgs::MotorCmd &msg)
 {
-    UNITREE_LEGGED_SDK::MotorCmd lcm;
-    lcm.mode = ros.mode;
-    lcm.q = ros.q;
-    lcm.dq = ros.dq;
-    lcm.tau = ros.tau;
-    lcm.Kp = ros.Kp;
-    lcm.Kd = ros.Kd;
-    lcm.reserve[0] = ros.reserve[0];
-    lcm.reserve[1] = ros.reserve[1];
-    lcm.reserve[2] = ros.reserve[2];
-    return lcm;
+    UNITREE_LEGGED_SDK::MotorCmd cmd;
+
+    cmd.mode = msg.mode;
+    cmd.q = msg.q;
+    cmd.dq = msg.dq;
+    cmd.tau = msg.tau;
+    cmd.Kp = msg.Kp;
+    cmd.Kd = msg.Kd;
+
+    for (int i(0); i < 3; i++)
+    {
+        cmd.reserve[i] = msg.reserve[i];
+    }
+
+    return cmd;
 }
 
-aliengo::MotorCmd ToLcm(unitree_legged_msgs::MotorCmd& ros, aliengo::MotorCmd lcmType){
-    aliengo::MotorCmd lcm;
-    lcm.mode = ros.mode;
-    lcm.position = ros.q;
-    lcm.velocity = ros.dq;
-    lcm.positionStiffness = ros.Kp;
-    lcm.velocityStiffness = ros.Kd;
-    lcm.torque = ros.tau;
-    return lcm;
-}
-
-unitree_legged_msgs::LowState ToRos(UNITREE_LEGGED_SDK::LowState& lcm)
+UNITREE_LEGGED_SDK::LowCmd rosMsg2Cmd(const unitree_legged_msgs::LowCmd::ConstPtr &msg)
 {
-    unitree_legged_msgs::LowState ros;
-    ros.levelFlag = lcm.levelFlag;
-    ros.commVersion = lcm.commVersion;
-    ros.robotID = lcm.robotID;
-    ros.SN = lcm.SN;
-    ros.bandWidth = lcm.bandWidth;
-    ros.imu = ToRos(lcm.imu);
-    for(int i = 0; i<20; i++){
-        ros.motorState[i] = ToRos(lcm.motorState[i]);
+    UNITREE_LEGGED_SDK::LowCmd cmd;
+
+    for (int i(0); i < 2; i++)
+    {
+        cmd.head[i] = msg->head[i];
+        cmd.SN[i] = msg->SN[i];
+        cmd.version[i] = msg->version[i];
     }
-    for(int i = 0; i<4; i++){
-        ros.footForce[i] = lcm.footForce[i];
-        ros.footForceEst[i] = lcm.footForceEst[i];
+
+    for (int i(0); i < 40; i++)
+    {
+        cmd.wirelessRemote[i] = msg->wirelessRemote[i];
     }
-    ros.tick = lcm.tick;
-    for(int i = 0; i<40; i++){
-        ros.wirelessRemote[i] = lcm.wirelessRemote[i];
+
+    for (int i(0); i < 20; i++)
+    {
+        cmd.motorCmd[i] = rosMsg2Cmd(msg->motorCmd[i]);
     }
-    ros.reserve = lcm.reserve;
-    ros.crc = lcm.crc;
-    return ros;
+
+    cmd.bms = rosMsg2Cmd(msg->bms);
+
+    cmd.levelFlag = msg->levelFlag;
+    cmd.frameReserve = msg->frameReserve;
+    cmd.bandWidth = msg->bandWidth;
+    cmd.reserve = msg->reserve;
+    cmd.crc = msg->crc;
+
+    return cmd;
 }
 
-unitree_legged_msgs::LowState ToRos(aliengo::LowState& lcm){
-    unitree_legged_msgs::LowState ros;
-    ros.levelFlag = lcm.levelFlag;
-    ros.commVersion = 0;
-    ros.robotID = 0;
-    ros.SN = 0;
-    ros.bandWidth = 0;
-    ros.imu = ToRos(lcm.imu);
-    for(int i = 0; i < 20; i++){
-        ros.motorState[i] = ToRos(lcm.motorState[i]);
-    }
-    for(int i = 0; i < 4; i++){
-        ros.footForce[i] = lcm.footForce[i];
-        ros.footForceEst[i] = 0;
-    }
-    ros.tick = lcm.tick;
-    for(int i = 0; i < 40; i++){
-        ros.wirelessRemote[i] = lcm.wirelessRemote[i];
-    }
-    ros.crc = lcm.crc;
-
-    return ros;
-}
-
-UNITREE_LEGGED_SDK::LowCmd ToLcm(unitree_legged_msgs::LowCmd& ros, UNITREE_LEGGED_SDK::LowCmd lcmType)
+unitree_legged_msgs::MotorState state2rosMsg(UNITREE_LEGGED_SDK::MotorState &state)
 {
-    UNITREE_LEGGED_SDK::LowCmd lcm;
-    lcm.levelFlag = ros.levelFlag;
-    lcm.commVersion = ros.commVersion;
-    lcm.robotID = ros.robotID;
-    lcm.SN = ros.SN;
-    lcm.bandWidth = ros.bandWidth;
-    for(int i = 0; i<20; i++){
-        lcm.motorCmd[i] = ToLcm(ros.motorCmd[i], lcm.motorCmd[i]);
-    }
-    for(int i = 0; i<4; i++){
-        lcm.led[i].r = ros.led[i].r;
-        lcm.led[i].g = ros.led[i].g;
-        lcm.led[i].b = ros.led[i].b;
-    }
-    for(int i = 0; i<40; i++){
-        lcm.wirelessRemote[i] = ros.wirelessRemote[i];
-    }
-    lcm.reserve = ros.reserve;
-    lcm.crc = ros.crc;
-    return lcm;
+    unitree_legged_msgs::MotorState ros_msg;
+
+    ros_msg.mode = state.mode;
+    ros_msg.q = state.q;
+    ros_msg.dq = state.dq;
+    ros_msg.ddq = state.ddq;
+    ros_msg.tauEst = state.tauEst;
+    ros_msg.q_raw = state.q_raw;
+    ros_msg.dq_raw = state.dq_raw;
+    ros_msg.ddq_raw = state.ddq_raw;
+    ros_msg.temperature = state.temperature;
+
+    ros_msg.reserve[0] = state.reserve[0];
+    ros_msg.reserve[1] = state.reserve[1];
+
+    return ros_msg;
 }
 
-aliengo::LowCmd ToLcm(unitree_legged_msgs::LowCmd& ros, aliengo::LowCmd lcmType){
-    aliengo::LowCmd lcm;
-    lcm.levelFlag = ros.levelFlag;
-    for(int i = 0; i < 20; i++){
-        lcm.motorCmd[i] = ToLcm(ros.motorCmd[i], lcm.motorCmd[i]);
-    }
-    for(int i = 0; i < 4; i++){
-        lcm.led[i].r = ros.led[i].r;
-        lcm.led[i].g = ros.led[i].g;
-        lcm.led[i].b = ros.led[i].b;
-    }
-    for(int i = 0; i < 40; i++){
-        lcm.wirelessRemote[i] = ros.wirelessRemote[i];
-    }
-    lcm.crc = ros.crc;
-    return lcm;
-}
-
-unitree_legged_msgs::HighState ToRos(UNITREE_LEGGED_SDK::HighState& lcm)
+unitree_legged_msgs::IMU state2rosMsg(UNITREE_LEGGED_SDK::IMU &state)
 {
-    unitree_legged_msgs::HighState ros;
-    ros.levelFlag = lcm.levelFlag;
-    ros.commVersion = lcm.commVersion;
-    ros.robotID = lcm.robotID;
-    ros.SN = lcm.SN;
-    ros.bandWidth = lcm.bandWidth;
-    ros.mode = lcm.mode;
-    ros.imu = ToRos(lcm.imu);
-    ros.forwardSpeed = lcm.forwardSpeed;
-    ros.sideSpeed = lcm.sideSpeed;
-    ros.rotateSpeed = lcm.rotateSpeed;
-    ros.bodyHeight = lcm.bodyHeight;
-    ros.updownSpeed = lcm.updownSpeed;
-    ros.forwardPosition = lcm.forwardPosition;
-    ros.sidePosition = lcm.sidePosition;
-    for(int i = 0; i<4; i++){
-        ros.footPosition2Body[i].x = lcm.footPosition2Body[i].x;
-        ros.footPosition2Body[i].y = lcm.footPosition2Body[i].y;
-        ros.footPosition2Body[i].z = lcm.footPosition2Body[i].z;
-        ros.footSpeed2Body[i].x = lcm.footSpeed2Body[i].x;
-        ros.footSpeed2Body[i].y = lcm.footSpeed2Body[i].y;
-        ros.footSpeed2Body[i].z = lcm.footSpeed2Body[i].z;
-        ros.footForce[i] = lcm.footForce[i];
-        ros.footForceEst[i] = lcm.footForceEst[i];
+    unitree_legged_msgs::IMU ros_msg;
+
+    for (int i(0); i < 4; i++)
+    {
+        ros_msg.quaternion[i] = state.quaternion[i];
     }
-    ros.tick = lcm.tick;
-    for(int i = 0; i<40; i++){
-        ros.wirelessRemote[i] = lcm.wirelessRemote[i];
+
+    for (int i(0); i < 3; i++)
+    {
+        ros_msg.gyroscope[i] = state.gyroscope[i];
+        ros_msg.accelerometer[i] = state.accelerometer[i];
+        ros_msg.rpy[i] = state.rpy[i];
     }
-    ros.reserve = lcm.reserve;
-    ros.crc = lcm.crc;
-    return ros;
+
+    ros_msg.temperature = state.temperature;
+
+    return ros_msg;
 }
 
-unitree_legged_msgs::HighState ToRos(aliengo::HighState& lcm){
-    unitree_legged_msgs::HighState ros;
-    ros.levelFlag = lcm.levelFlag;
-    ros.commVersion = 0;
-    ros.robotID = 0;
-    ros.SN = 0;
-    ros.bandWidth = 0;
-    ros.mode = lcm.mode;
-    ros.imu = ToRos(lcm.imu);
-    ros.forwardSpeed = lcm.forwardSpeed;
-    ros.sideSpeed = lcm.sideSpeed;
-    ros.rotateSpeed = lcm.rotateSpeed;
-    ros.bodyHeight = lcm.bodyHeight;
-    ros.updownSpeed = lcm.updownSpeed;
-    ros.forwardPosition = lcm.forwardPosition.x;
-    ros.sidePosition = lcm.sidePosition.y;
-    for(int i = 0; i < 4; i++){
-        ros.footPosition2Body[i].x = lcm.footPosition2Body[i].x;
-        ros.footPosition2Body[i].y = lcm.footPosition2Body[i].y;
-        ros.footPosition2Body[i].z = lcm.footPosition2Body[i].z;
-        ros.footSpeed2Body[i].x = lcm.footSpeed2Body[i].x;
-        ros.footSpeed2Body[i].y = lcm.footSpeed2Body[i].y;
-        ros.footSpeed2Body[i].z = lcm.footSpeed2Body[i].z;
-        ros.footForce[i] = lcm.footForce[i];
-        ros.footForceEst[i] = 0;
-    }
-    ros.tick = lcm.tick;
-    for(int i = 0; i<40; i++){
-        ros.wirelessRemote[i] = lcm.wirelessRemote[i];
-    }
-    ros.reserve = 0;
-    ros.crc = lcm.crc;
-    return ros;
-}
-
-UNITREE_LEGGED_SDK::HighCmd ToLcm(unitree_legged_msgs::HighCmd& ros, UNITREE_LEGGED_SDK::HighCmd lcmType)
+unitree_legged_msgs::BmsState state2rosMsg(UNITREE_LEGGED_SDK::BmsState &state)
 {
-    UNITREE_LEGGED_SDK::HighCmd lcm;
-    lcm.levelFlag = ros.levelFlag;
-    lcm.commVersion = ros.commVersion;
-    lcm.robotID = ros.robotID;
-    lcm.SN = ros.SN;
-    lcm.bandWidth = ros.bandWidth;
-    lcm.mode = ros.mode;
-    lcm.forwardSpeed = ros.forwardSpeed;
-    lcm.sideSpeed = ros.sideSpeed;
-    lcm.rotateSpeed = ros.rotateSpeed;
-    lcm.bodyHeight = ros.bodyHeight;
-    lcm.footRaiseHeight = ros.footRaiseHeight;
-    lcm.yaw = ros.yaw;
-    lcm.pitch = ros.pitch;
-    lcm.roll = ros.roll;
-    for(int i = 0; i<4; i++){
-        lcm.led[i].r = ros.led[i].r;
-        lcm.led[i].g = ros.led[i].g;
-        lcm.led[i].b = ros.led[i].b;
+    unitree_legged_msgs::BmsState ros_msg;
+
+    for (int i(0); i < 2; i++)
+    {
+        ros_msg.BQ_NTC[i] = state.BQ_NTC[i];
+        ros_msg.MCU_NTC[i] = state.MCU_NTC[i];
     }
-    for(int i = 0; i<40; i++){
-        lcm.wirelessRemote[i] = ros.wirelessRemote[i];
-        lcm.AppRemote[i] = ros.AppRemote[i];
+
+    for (int i(0); i < 10; i++)
+    {
+        ros_msg.cell_vol[i] = state.cell_vol[i];
     }
-    lcm.reserve = ros.reserve;
-    lcm.crc = ros.crc;
-    return lcm;
+
+    ros_msg.version_h = state.version_h;
+    ros_msg.version_l = state.version_l;
+    ros_msg.bms_status = state.bms_status;
+    ros_msg.SOC = state.SOC;
+    ros_msg.current = state.current;
+    ros_msg.cycle = state.cycle;
+
+    return ros_msg;
 }
 
-aliengo::HighCmd ToLcm(unitree_legged_msgs::HighCmd& ros, aliengo::HighCmd lcmType){
-    aliengo::HighCmd lcm;
-    lcm.levelFlag = ros.levelFlag;
-    lcm.mode = ros.mode;
-    lcm.forwardSpeed = ros.forwardSpeed;
-    lcm.sideSpeed = ros.sideSpeed;
-    lcm.rotateSpeed = ros.rotateSpeed;
-    lcm.bodyHeight = ros.bodyHeight;
-    lcm.footRaiseHeight = ros.footRaiseHeight;
-    lcm.yaw = ros.yaw;
-    lcm.pitch = ros.pitch;
-    lcm.roll = ros.roll;
-    for(int i = 0; i < 4; i++){
-        lcm.led[i].r = ros.led[i].r;
-        lcm.led[i].g = ros.led[i].g;
-        lcm.led[i].b = ros.led[i].b;
+unitree_legged_msgs::LowState state2rosMsg(UNITREE_LEGGED_SDK::LowState &state)
+{
+    unitree_legged_msgs::LowState ros_msg;
+
+    for (int i(0); i < 2; i++)
+    {
+        ros_msg.head[i] = state.head[i];
+        ros_msg.SN[i] = state.SN[i];
+        ros_msg.version[i] = state.version[i];
     }
-    for(int i = 0; i < 40; i++){
-        lcm.wirelessRemote[i] = ros.wirelessRemote[i];
+
+    for (int i(0); i < 4; i++)
+    {
+        ros_msg.footForce[i] = state.footForce[i];
+        ros_msg.footForceEst[i] = state.footForceEst[i];
     }
-    lcm.crc = ros.crc;
-    return lcm;
+
+    for (int i(0); i < 40; i++)
+    {
+        ros_msg.wirelessRemote[i] = state.wirelessRemote[i];
+    }
+
+    for (int i(0); i < 20; i++)
+    {
+        ros_msg.motorState[i] = state2rosMsg(state.motorState[i]);
+    }
+
+    ros_msg.imu = state2rosMsg(state.imu);
+
+    ros_msg.bms = state2rosMsg(state.bms);
+
+    ros_msg.tick = state.tick;
+    ros_msg.reserve = state.reserve;
+    ros_msg.crc = state.crc;
+
+    return ros_msg;
 }
 
+unitree_legged_msgs::Cartesian state2rosMsg(UNITREE_LEGGED_SDK::Cartesian &state)
+{
+    unitree_legged_msgs::Cartesian ros_msg;
 
-#endif
+    ros_msg.x = state.x;
+    ros_msg.y = state.y;
+    ros_msg.z = state.z;
+
+    return ros_msg;
+}
+
+unitree_legged_msgs::HighState state2rosMsg(UNITREE_LEGGED_SDK::HighState &state)
+{
+    unitree_legged_msgs::HighState ros_msg;
+
+    for (int i(0); i < 2; i++)
+    {
+        ros_msg.head[i] = state.head[i];
+        ros_msg.SN[i] = state.SN[i];
+        ros_msg.version[i] = state.version[i];
+    }
+
+    for (int i(0); i < 4; i++)
+    {
+        ros_msg.footForce[i] = state.footForce[i];
+        ros_msg.footForceEst[i] = state.footForceEst[i];
+        ros_msg.rangeObstacle[i] = state.rangeObstacle[i];
+        ros_msg.footPosition2Body[i] = state2rosMsg(state.footPosition2Body[i]);
+        ros_msg.footSpeed2Body[i] = state2rosMsg(state.footSpeed2Body[i]);
+    }
+
+    for (int i(0); i < 3; i++)
+    {
+        ros_msg.position[i] = state.position[i];
+        ros_msg.velocity[i] = state.velocity[i];
+    }
+
+    for (int i(0); i < 40; i++)
+    {
+        ros_msg.wirelessRemote[i] = state.wirelessRemote[i];
+    }
+
+    for (int i(0); i < 20; i++)
+    {
+        ros_msg.motorState[i] = state2rosMsg(state.motorState[i]);
+    }
+
+    ros_msg.imu = state2rosMsg(state.imu);
+
+    ros_msg.bms = state2rosMsg(state.bms);
+
+    ros_msg.levelFlag = state.levelFlag;
+    ros_msg.frameReserve = state.frameReserve;
+    ros_msg.bandWidth = state.bandWidth;
+    ros_msg.mode = state.mode;
+    ros_msg.progress = state.progress;
+    ros_msg.gaitType = state.gaitType;
+    ros_msg.footRaiseHeight = state.footRaiseHeight;
+    ros_msg.bodyHeight = state.bodyHeight;
+    ros_msg.yawSpeed = state.yawSpeed;
+    ros_msg.reserve = state.reserve;
+    ros_msg.crc = state.crc;
+
+    return ros_msg;
+}
+
+UNITREE_LEGGED_SDK::HighCmd rosMsg2Cmd(const geometry_msgs::Twist::ConstPtr &msg)
+{
+    UNITREE_LEGGED_SDK::HighCmd cmd;
+
+    cmd.head[0] = 0xFE;
+    cmd.head[1] = 0xEF;
+    cmd.levelFlag = UNITREE_LEGGED_SDK::HIGHLEVEL;
+    cmd.mode = 0;
+    cmd.gaitType = 0;
+    cmd.speedLevel = 0;
+    cmd.footRaiseHeight = 0;
+    cmd.bodyHeight = 0;
+    cmd.euler[0] = 0;
+    cmd.euler[1] = 0;
+    cmd.euler[2] = 0;
+    cmd.velocity[0] = 0.0f;
+    cmd.velocity[1] = 0.0f;
+    cmd.yawSpeed = 0.0f;
+    cmd.reserve = 0;
+
+    cmd.velocity[0] = msg->linear.x;
+    cmd.velocity[1] = msg->linear.y;
+    cmd.yawSpeed = msg->angular.z;
+
+    cmd.mode = 2;
+    cmd.gaitType = 1;
+
+    return cmd;
+}
+
+#endif // _CONVERT_H_

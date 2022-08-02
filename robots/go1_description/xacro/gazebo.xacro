@@ -8,30 +8,29 @@
         </plugin>
     </gazebo>
 
-    <!-- simulate a body pose sensor -->
+    <!-- Show the trajectory of trunk center. -->
     <gazebo>
-        <plugin name="p3d" filename="libgazebo_ros_p3d.so">
-        <alwaysOn>true</alwaysOn>
-        <updateRate>100.0</updateRate>
-        <bodyName>base</bodyName>
-        <topicName>body_pose_ground_truth</topicName>
-        <frameName>world</frameName>
-        <xyzOffsets>0 0 0.0</xyzOffsets>
-        <rpyOffsets>0 0 0.0</rpyOffsets>
+        <plugin name="3dplot" filename="libLinkPlot3DPlugin.so">
+            <frequency>10</frequency>
+            <plot>
+                <link>base</link>
+                <pose>0 0 0 0 0 0</pose>
+                <material>Gazebo/Yellow</material>
+            </plot>
         </plugin>
     </gazebo>
 
-    <gazebo>
-        <plugin name="p3d" filename="libgazebo_ros_p3d.so">
-            <always_on>true</always_on>
-            <update_rate>200</update_rate>
-            <bodyName>base</bodyName>
-            <topicName>/torso_odom</topicName>
-            <frameName>world</frameName>
-            <xyzOffset>0 0 0</xyzOffset>
-            <rpyOffset>0 0 0</rpyOffset>
+    <!-- Show the trajectory of foot. You can add another trajectory about another foot. -->
+    <!-- <gazebo>
+        <plugin name="3dplot" filename="libLinkPlot3DPlugin.so">
+            <frequency>100</frequency>
+            <plot>
+                <link>FL_foot</link>
+                <pose>0 0 0 0 0 0</pose>
+                <material>Gazebo/Green</material>
+            </plot>
         </plugin>
-    </gazebo>
+    </gazebo> -->
 
     <gazebo>
         <plugin filename="libgazebo_ros_force.so" name="gazebo_ros_force">
