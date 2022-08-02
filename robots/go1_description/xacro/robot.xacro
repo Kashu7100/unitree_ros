@@ -5,13 +5,10 @@
     <xacro:include filename="$(find go1_description)/xacro/const.xacro"/>
     <xacro:include filename="$(find go1_description)/xacro/materials.xacro"/>
     <xacro:include filename="$(find go1_description)/xacro/leg.xacro"/>
-    <!-- <xacro:include filename="$(find go1_description)/xacro/stairs.xacro"/> -->
     <xacro:include filename="$(find go1_description)/xacro/gazebo.xacro"/>
     <xacro:include filename="$(find go1_description)/xacro/depthCamera.xacro"/>
     <xacro:include filename="$(find go1_description)/xacro/ultraSound.xacro"/>
-    <!-- <xacro:include filename="$(find go1_gazebo)/launch/stairs.urdf.xacro"/> -->
 
-    <!-- <xacro:stairs stairs="15" xpos="0" ypos="0" zpos="0" /> -->
 
     <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it. -->
     <xacro:property name="rolloverProtection" value="false"/>
@@ -47,7 +44,6 @@
             <geometry>
                 <mesh filename="package://go1_description/meshes/trunk.dae" scale="1 1 1"/>
             </geometry>
-            <!-- <material name="orange"/> -->
         </visual>
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -78,7 +74,6 @@
                     <cylinder length="${stick_length}" radius="${stick_radius}"/>
                 </geometry>
                 <origin rpy="0 0 0" xyz="0 0 0"/>
-                <!-- <material name="white"/> -->
             </visual>
             <collision>
                 <geometry>
@@ -113,7 +108,6 @@
             <geometry>
                 <box size="0.001 0.001 0.001"/>
             </geometry>
-            <!-- <material name="red"/> -->
         </visual>
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
