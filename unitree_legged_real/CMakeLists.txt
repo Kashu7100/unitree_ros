@@ -29,12 +29,12 @@ set(CMAKE_CXX_FLAGS "-O3 -fPIC")
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/unitree_legged_sdk-master/include
+    ${CMAKE_SOURCE_DIR}/unitree_legged_sdk/include
 )
 
 
 
-link_directories(${CMAKE_SOURCE_DIR}/unitree_legged_sdk-master/lib)
+link_directories(${CMAKE_SOURCE_DIR}/unitree_legged_sdk/lib)
 
 
 
