@@ -11,6 +11,17 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package()
 
+include_directories(
+    include
+    ${catkin_INCLUDE_DIRS}
+    # ${CMAKE_SOURCE_DIR}/unitree_legged_sdk/include
+    ${SUPPORT_WS}/unitree_legged_sdk/include
+
+)
+
+# link_directories(${CMAKE_SOURCE_DIR}/unitree_legged_sdk/lib)
+link_directories(${SUPPORT_WS}/unitree_legged_sdk/lib)
+
 message("-- CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64.*")
   set(ARCH amd64)
@@ -21,23 +32,7 @@ set(LEGGED_SDK_NAME -pthread libunitree_legged_sdk_${ARCH}.so lcm)
 
 set(EXTRA_LIBS ${LEGGED_SDK_NAME} lcm)
 
-
 set(CMAKE_CXX_FLAGS "-O3 -fPIC")
-
-
-
-include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/unitree_legged_sdk/include
-)
-
-
-
-link_directories(${CMAKE_SOURCE_DIR}/unitree_legged_sdk/lib)
-
-
-
 
 add_executable(example_walk src/exe/example_walk.cpp)
 target_link_libraries(example_walk ${EXTRA_LIBS} ${catkin_LIBRARIES})
