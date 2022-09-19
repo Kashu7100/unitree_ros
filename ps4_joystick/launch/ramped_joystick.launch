@@ -6,7 +6,7 @@
     </node>
 
     <!-- Ramped Joystick node -->
-    <node pkg="go1_joystick" type="ramped_joystick.py"
+    <node pkg="ps4_joystick" type="ramped_joystick.py"
         name="RAMPED_JOYSTICK" output="screen"/>
 
 </launch>
