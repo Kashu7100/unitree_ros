@@ -11,8 +11,8 @@
 
 float roll_ang = 0.0;
 float pitch_ang = 0.0;
-float yaw_ang = 0.0;
-float bod_height_ros = 0.0;//1
+float yaw_ang = -3.142 * 0.5;
+float bod_height_ros = 0.0;
 float bod_height_ros_max = 0.5;
 float bod_height_ros_min = -0.4;
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         {
             // model_state_pub.pose.position.x = radius * sin(2*M_PI*(double)time_ms/period);
             // model_state_pub.pose.position.y = radius * cos(2*M_PI*(double)time_ms/period);
-            model_state_pub.pose.position.z = 0.325+bod_height_ros;
+            model_state_pub.pose.position.z = 0.325 + 0.775 + bod_height_ros;
             // model_state_pub.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, - 2*M_PI*(double)time_ms/period);
             model_state_pub.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll_ang, pitch_ang, yaw_ang);
 

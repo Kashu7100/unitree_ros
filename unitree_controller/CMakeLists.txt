@@ -56,3 +56,9 @@ target_link_libraries(unitree_servo ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(unitree_move_kinetic src/move_publisher.cpp)
 target_link_libraries(unitree_move_kinetic ${catkin_LIBRARIES})
+
+add_executable(unitree_move_onto_conveyor src/move_onto_conveyor_publisher.cpp)
+target_link_libraries(unitree_move_onto_conveyor ${catkin_LIBRARIES})
+
+add_executable(unitree_gazebo_low_state_pub src/lowStatePub.cpp)
+target_link_libraries(unitree_gazebo_low_state_pub ${PROJECT_NAME} ${catkin_LIBRARIES})
