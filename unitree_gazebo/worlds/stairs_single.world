@@ -3,10 +3,10 @@
     <world name="default">
 
         <physics type="ode">
-        <max_step_size>0.00025</max_step_size>
+        <max_step_size>0.0001</max_step_size>
         <real_time_factor>1.0</real_time_factor>
-        <real_time_update_rate>1000</real_time_update_rate>
-        <gravity>0 0 0</gravity>
+        <real_time_update_rate>10000</real_time_update_rate>
+        <gravity>0 0 -9.81</gravity>
             <ode>
                 <solver>
                 <type>quick</type>  
@@ -23,11 +23,11 @@
         </physics>
 
         <scene>
-        <!-- <sky>
+        <sky>
             <clouds>
                 <speed>12</speed>
             </clouds>
-        </sky> -->
+        </sky>
         </scene>
         <!-- A global light source -->
         <include>
@@ -40,19 +40,20 @@
         <!-- environment blocks, obstacles or stairs -->
         <model name="static_environment">
         <static>true</static>
-            <link name="static_box">
-                <pose>-2 2 0.5 0 0 0</pose>
-                <collision name="static_box_collision">
+
+            <link name="floor">
+                <pose>2 0 0.045 0 0 0</pose>
+                <collision name="floor_collision">
                     <geometry>
                         <box>
-                            <size>1 1 1</size>
+                            <size>3.5 3.5 0.2</size>
                         </box>
                     </geometry>
                 </collision>
-                <visual name="static_box_visual">
+                <visual name="floor_visual">
                     <geometry>
                         <box>
-                            <size>1 1 1</size>
+                            <size>3.5 3.5 0.2</size>
                         </box>
                     </geometry>
                     <material>
@@ -61,6 +62,7 @@
                     </material>
                 </visual>
             </link>
+
         </model>
 
     </world>
