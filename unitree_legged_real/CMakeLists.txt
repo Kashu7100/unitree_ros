@@ -15,11 +15,11 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/unitree_legged_sdk/include
-    # ${UNITREE_LEGGED_SDK_PATH}/include
+    ${UNITREE_LEGGED_SDK_PATH}/include
 )
 
 link_directories(${CMAKE_SOURCE_DIR}/unitree_legged_sdk/lib)
-# link_directories(${UNITREE_LEGGED_SDK_PATH}/lib)
+link_directories(${UNITREE_LEGGED_SDK_PATH}/lib)
 
 message("-- CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64.*")
