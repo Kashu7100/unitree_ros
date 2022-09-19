@@ -7,8 +7,6 @@
     <xacro:include filename="$(find a1_description)/xacro/leg.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/stairs.xacro"/>
     <xacro:include filename="$(find a1_description)/xacro/gazebo.xacro"/>
-    <!-- <xacro:include filename="$(find a1_gazebo)/launch/stairs.urdf.xacro"/> -->
-
     <!-- <xacro:stairs stairs="15" xpos="0" ypos="0" zpos="0" /> -->
 
     <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it. -->
@@ -50,7 +48,7 @@
         <collision>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
-                <box size="${trunk_length} ${trunk_width} ${trunk_height}"/>
+                <mesh filename="package://a1_description/meshes/trunk.dae" scale="1 1 1"/>
             </geometry>
         </collision>
         <inertial>
