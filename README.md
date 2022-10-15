@@ -1,6 +1,3 @@
-# Introduction
-Here are the ROS packages of Unitree robots, namely Laikago, Aliengo and A1. You can load robots and joint controllers in Gazebo, so you can do low-level control(control the torque, position and angular velocity) on the robot joints. Please watch out that the Gazebo simulation cannot do high-level control, namely walking. Besides of these simulation functions, you can also control your real robots in ROS by the `unitree_legged_real`. For real robots, you can do high-level and low-level control by our ROS packages.
-
 ## Packages:
 Robot description: `a1_description`, `aliengo_description`, `laikago_description`
 
@@ -36,13 +33,9 @@ export UNITREE_PLATFORM="amd64"
 # Build
 Please run the following command to install relative packages.
 
-If your ROS is melodic:
+ROS Melodic:
 ```
 sudo apt-get install ros-melodic-controller-interface  ros-melodic-gazebo-ros-control ros-melodic-joint-state-controller ros-melodic-effort-controllers ros-melodic-joint-trajectory-controller
-```
-Else if your ROS is kinetic:
-```
-sudo apt-get install ros-kinetic-controller-manager ros-kinetic-ros-control ros-kinetic-ros-controllers ros-kinetic-joint-state-controller ros-kinetic-effort-controllers ros-kinetic-velocity-controllers ros-kinetic-position-controllers ros-kinetic-robot-controllers ros-kinetic-robot-state-publisher ros-kinetic-gazebo8-ros ros-kinetic-gazebo8-ros-control ros-kinetic-gazebo8-ros-pkgs ros-kinetic-gazebo8-ros-dev
 ```
 
 And open the file `unitree_gazebo/worlds/stairs.world`. At the end of the file:
